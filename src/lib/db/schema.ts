@@ -153,6 +153,7 @@ export const writingModels = sqliteTable("writing_models", {
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
+  tags: text("tags"),
   sourceType: text("source_type"),
   sourceAnalysisId: integer("source_analysis_id").references(() => textAnalyses.id, {
     onDelete: "set null",

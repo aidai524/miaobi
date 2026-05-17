@@ -26,10 +26,14 @@ function buildBookPlanPrompt(input: GenerateBookPlanInput) {
 - 写作风格：${input.writingStyle || "未指定"}
 - 预计字数：${input.expectedWordCount ? `${input.expectedWordCount} 字` : "未指定"}
 
+参考创作模型：
+${input.referenceModel ? JSON.stringify(input.referenceModel, null, 2) : "无"}
+
 要求：
 1. 只做内容层面的定位与编辑建议，不要编造销量、榜单、市场份额等真实市场数据。
 2. 输出必须是严格 JSON 对象，不要 Markdown，不要解释。
 3. 字段必须完整，数组字段使用字符串数组。
+4. 如果提供了参考创作模型，请吸收其结构、语言、内容模式和避免事项，但不要复制原文。
 
 JSON 结构：
 {

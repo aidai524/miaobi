@@ -5,6 +5,7 @@ import { generateBookPlan } from "@/lib/ai/book-plan";
 import { db } from "@/lib/db";
 import { bookPlans, bookProjects } from "@/lib/db/schema";
 import { errorResponse, parseId } from "@/lib/http";
+import { getUserModel, mapModelContext } from "@/lib/models/service";
 import { getUserProject } from "@/lib/projects/service";
 
 type RouteContext = {
@@ -36,6 +37,9 @@ export async function POST(_request: Request, context: RouteContext) {
       bookType: project.bookType,
       writingStyle: project.writingStyle,
       expectedWordCount: project.expectedWordCount,
+      referenceModel: project.referenceModelId
+        ? mapModelContext(await getUserModel(project.referenceModelId, user.id))
+        : null,
     });
 
     await db.delete(bookPlans).where(eq(bookPlans.projectId, project.id));

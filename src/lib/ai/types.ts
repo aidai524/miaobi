@@ -17,6 +17,7 @@ export type GenerateBookPlanInput = {
   bookType?: string | null;
   writingStyle?: string | null;
   expectedWordCount?: number | null;
+  referenceModel?: WritingModelContext | null;
 };
 
 export type OutlineNodeResult = {
@@ -77,4 +78,39 @@ export type TextAnalysisResult = {
 export type AnalyzeTextInput = {
   text: string;
   analysisType?: string | null;
+};
+
+export type WritingModelContext = {
+  name: string;
+  tags?: string[] | null;
+  modelSummary?: string | null;
+  applicableScenarios?: string | null;
+  targetReader?: string | null;
+  structurePattern?: string | null;
+  languagePattern?: string | null;
+  contentPattern?: string | null;
+  writingGuidelines?: string | null;
+  avoidRules?: string | null;
+  promptTemplate?: string | null;
+};
+
+export type WritingModelResult = {
+  name: string;
+  tags: string[];
+  modelSummary: string;
+  applicableScenarios: string;
+  targetReader: string;
+  structurePattern: string;
+  languagePattern: string;
+  contentPattern: string;
+  writingGuidelines: string;
+  avoidRules: string;
+  promptTemplate: string;
+};
+
+export type CreateWritingModelInput = {
+  name?: string | null;
+  analysis: TextAnalysisResult & {
+    analysisType?: string | null;
+  };
 };

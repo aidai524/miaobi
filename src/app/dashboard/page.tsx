@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BookOpen, FileText, Library, Settings } from "lucide-react";
+import { BookOpen, FileText, Layers, Settings } from "lucide-react";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireUser } from "@/lib/auth/session";
@@ -18,10 +18,10 @@ const modules = [
     href: "/analyze",
   },
   {
-    title: "图书与作者库",
-    description: "沉淀公共灵感库，为新项目提供参考。",
-    icon: Library,
-    href: null,
+    title: "创作模型",
+    description: "把文本分析结果沉淀为可复用的结构、风格和写作约束。",
+    icon: Layers,
+    href: "/models",
   },
   {
     title: "系统设置",

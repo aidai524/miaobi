@@ -1,6 +1,7 @@
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { bookPlans, bookProjects } from "@/lib/db/schema";
+import { getUserModel } from "@/lib/models/service";
 import type { CreateProjectInput, UpdateProjectInput } from "./validation";
 
 export async function listUserProjects(userId: number) {
@@ -22,6 +23,8 @@ export async function getUserProject(projectId: number, userId: number) {
 }
 
 export async function createUserProject(userId: number, input: CreateProjectInput) {
+  const referenceModel = input.referenceModelId ? await getUserModel(input.referenceModelId, userId) : null;
+
   const rows = await db
     .insert(bookProjects)
     .values({
@@ -32,7 +35,7 @@ export async function createUserProject(userId: number, input: CreateProjectInpu
       bookType: input.bookType,
       writingStyle: input.writingStyle,
       expectedWordCount: input.expectedWordCount,
-      referenceModelId: input.referenceModelId,
+      referenceModelId: referenceModel?.id,
       status: "draft",
     })
     .returning();

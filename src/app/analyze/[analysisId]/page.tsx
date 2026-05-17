@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
+import { SaveModelButton } from "@/components/models/save-model-button";
 import { ProjectShell } from "@/components/project/project-shell";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -86,9 +87,7 @@ export default async function AnalysisDetailPage({ params }: PageProps) {
             <Link className={cn(buttonVariants())} href={`/api/analyses/${analysis.id}`}>
               查看原始 JSON
             </Link>
-            <Link className={cn(buttonVariants({ variant: "secondary" }))} href="/models">
-              保存为创作模型
-            </Link>
+            <SaveModelButton analysisId={analysis.id} />
           </div>
         </CardContent>
       </Card>

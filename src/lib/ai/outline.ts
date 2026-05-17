@@ -26,6 +26,7 @@ function buildPlanContext(input: GenerateOutlineInput) {
       writingStyle: input.writingStyle,
       expectedWordCount: input.expectedWordCount,
       plan: input.plan,
+      referenceModel: input.referenceModel,
     },
     null,
     2,

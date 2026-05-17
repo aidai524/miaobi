@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { bookProjects } from "@/lib/db/schema";
 import { parseJsonArray } from "@/lib/format";
 import { errorResponse, parseId } from "@/lib/http";
+import { getUserModel, mapModelContext } from "@/lib/models/service";
 import { buildOutlineTree, listProjectOutlineNodes, replaceProjectOutline } from "@/lib/outline/service";
 import { getProjectPlan, getUserProject } from "@/lib/projects/service";
 
@@ -59,6 +60,9 @@ export async function POST(_request: Request, context: RouteContext) {
       writingStyle: project.writingStyle,
       expectedWordCount: project.expectedWordCount,
       plan: mapPlan(plan),
+      referenceModel: project.referenceModelId
+        ? mapModelContext(await getUserModel(project.referenceModelId, user.id))
+        : null,
     });
 
     await replaceProjectOutline(project.id, generated.data.nodes);

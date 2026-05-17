@@ -1,6 +1,6 @@
 # AI 出书 SaaS
 
-AI 出书 SaaS v0.1，按 `ai-book-saas-codex-development-plan.md` 分 Phase 开发。当前完成 Phase 1-5：Next.js App Router、TypeScript、Tailwind CSS、shadcn/ui 风格组件、Drizzle + SQLite、注册登录、cookie session、管理员 seed、图书项目创建、AI 策划案生成、三级目录生成与编辑、正文工作台与版本历史、文件上传与文本分析。
+AI 出书 SaaS v0.1，按 `ai-book-saas-codex-development-plan.md` 分 Phase 开发。当前完成 Phase 1-6：Next.js App Router、TypeScript、Tailwind CSS、shadcn/ui 风格组件、Drizzle + SQLite、注册登录、cookie session、管理员 seed、图书项目创建、AI 策划案生成、三级目录生成与编辑、正文工作台与版本历史、文件上传与文本分析、创作模型沉淀与复用。
 
 ## Getting Started
 
@@ -76,3 +76,14 @@ npm run build
 - `GET /api/documents/[documentId]`：读取文档详情
 - `POST /api/documents/[documentId]/analyze`：调用 AI 生成文本分析
 - `GET /api/analyses/[analysisId]`：读取分析详情
+
+## Phase 6 路由
+
+- `/models`：创作模型列表
+- `/models/[modelId]`：创作模型详情，并可基于模型创建新书
+- `POST /api/analyses/[analysisId]/save-as-model`：把分析报告转成创作模型
+- `GET /api/models`：读取创作模型列表
+- `GET /api/models/[modelId]`：读取创作模型详情
+- `PATCH /api/models/[modelId]`：更新创作模型内容
+- `DELETE /api/models/[modelId]`：删除创作模型
+- `POST /api/models/[modelId]/create-project`：基于创作模型创建新书项目

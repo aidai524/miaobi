@@ -5,10 +5,19 @@ import { ProjectShell } from "@/components/project/project-shell";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 import { requireUser } from "@/lib/auth/session";
+import { listUserModels } from "@/lib/models/service";
 import { cn } from "@/lib/utils";
 
-export default async function NewProjectPage() {
+type PageProps = {
+  searchParams?: Promise<{ modelId?: string }>;
+};
+
+export default async function NewProjectPage({ searchParams }: PageProps) {
   const user = await requireUser();
+  const models = await listUserModels(user.id);
+  const params = searchParams ? await searchParams : {};
+  const selectedModelId = Number(params.modelId);
+  const defaultReferenceModelId = models.some((model) => model.id === selectedModelId) ? selectedModelId : undefined;
 
   return (
     <ProjectShell user={user}>
@@ -27,7 +36,10 @@ export default async function NewProjectPage() {
           <CardDescription>信息越具体，策划案越容易贴近你的真实目标。</CardDescription>
         </CardHeader>
         <CardContent>
-          <ProjectCreateForm />
+          <ProjectCreateForm
+            models={models.map((model) => ({ id: model.id, name: model.name }))}
+            defaultReferenceModelId={defaultReferenceModelId}
+          />
         </CardContent>
       </Card>
     </ProjectShell>

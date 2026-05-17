@@ -8,7 +8,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
-export function ProjectCreateForm() {
+type ReferenceModelOption = {
+  id: number;
+  name: string;
+};
+
+type ProjectCreateFormProps = {
+  models?: ReferenceModelOption[];
+  defaultReferenceModelId?: number;
+};
+
+export function ProjectCreateForm({ models = [], defaultReferenceModelId }: ProjectCreateFormProps) {
   const router = useRouter();
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -25,6 +35,7 @@ export function ProjectCreateForm() {
       bookType: String(formData.get("bookType") ?? ""),
       writingStyle: String(formData.get("writingStyle") ?? ""),
       expectedWordCount: String(formData.get("expectedWordCount") ?? ""),
+      referenceModelId: Number(formData.get("referenceModelId")) || undefined,
     };
 
     const response = await fetch("/api/projects", {
@@ -80,6 +91,26 @@ export function ProjectCreateForm() {
           <Input id="expectedWordCount" name="expectedWordCount" type="number" min="1" placeholder="例如：80000" />
         </div>
       </div>
+
+      {models.length ? (
+        <div className="space-y-2">
+          <Label htmlFor="referenceModelId">参考创作模型</Label>
+          <select
+            id="referenceModelId"
+            name="referenceModelId"
+            defaultValue={defaultReferenceModelId ?? ""}
+            className="flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-950 shadow-sm outline-none transition-colors focus:border-zinc-400 focus:ring-2 focus:ring-zinc-100"
+          >
+            <option value="">不使用创作模型</option>
+            {models.map((model) => (
+              <option key={model.id} value={model.id}>
+                {model.name}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-zinc-500">选择后，策划案和目录生成会读取该模型的结构、风格和写作约束。</p>
+        </div>
+      ) : null}
 
       {error ? <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p> : null}
 
