@@ -63,3 +63,18 @@ export type RewriteChapterInput = {
   title: string;
   content: string;
 };
+
+export type TextAnalysisResult = {
+  summary: string;
+  contentTopics: string[];
+  readerProfile: string;
+  structureAnalysis: string;
+  styleAnalysis: string;
+  reusableTraits: string[];
+  writingAdvice: string[];
+};
+
+export type AnalyzeTextInput = {
+  text: string;
+  analysisType?: string | null;
+};

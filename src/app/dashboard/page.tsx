@@ -15,7 +15,7 @@ const modules = [
     title: "文本分析",
     description: "上传资料，提取结构、风格和可复用写作特征。",
     icon: FileText,
-    href: null,
+    href: "/analyze",
   },
   {
     title: "图书与作者库",

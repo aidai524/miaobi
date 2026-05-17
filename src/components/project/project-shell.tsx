@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BookOpen, LayoutDashboard, Plus } from "lucide-react";
+import { BookOpen, FileText, LayoutDashboard, Plus } from "lucide-react";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -19,6 +19,10 @@ export function ProjectShell({ user, children }: { user: CurrentUser; children: 
             <Link className="flex items-center gap-2 rounded-md bg-zinc-950 px-3 py-2 text-white" href="/projects">
               <BookOpen className="h-4 w-4" />
               项目
+            </Link>
+            <Link className="flex items-center gap-2 rounded-md px-3 py-2 text-zinc-600 hover:bg-zinc-100" href="/analyze">
+              <FileText className="h-4 w-4" />
+              分析
             </Link>
           </nav>
         </aside>

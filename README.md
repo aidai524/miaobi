@@ -1,6 +1,6 @@
 # AI 出书 SaaS
 
-AI 出书 SaaS v0.1，按 `ai-book-saas-codex-development-plan.md` 分 Phase 开发。当前完成 Phase 1-4：Next.js App Router、TypeScript、Tailwind CSS、shadcn/ui 风格组件、Drizzle + SQLite、注册登录、cookie session、管理员 seed、图书项目创建、AI 策划案生成、三级目录生成与编辑、正文工作台与版本历史。
+AI 出书 SaaS v0.1，按 `ai-book-saas-codex-development-plan.md` 分 Phase 开发。当前完成 Phase 1-5：Next.js App Router、TypeScript、Tailwind CSS、shadcn/ui 风格组件、Drizzle + SQLite、注册登录、cookie session、管理员 seed、图书项目创建、AI 策划案生成、三级目录生成与编辑、正文工作台与版本历史、文件上传与文本分析。
 
 ## Getting Started
 
@@ -66,3 +66,13 @@ npm run build
 - `POST /api/chapters/[chapterId]/rewrite`：调用 AI 改写正文并记录版本
 - `GET /api/chapters/[chapterId]/versions`：读取版本历史
 - `POST /api/chapters/[chapterId]/restore-version`：恢复版本并记录恢复历史
+
+## Phase 5 路由
+
+- `/analyze`：上传文本并发起分析
+- `/analyze/[analysisId]`：查看文本分析报告
+- `POST /api/documents/upload`：上传并提取 txt、md、docx、pdf 文本
+- `GET /api/documents`：读取上传文档列表
+- `GET /api/documents/[documentId]`：读取文档详情
+- `POST /api/documents/[documentId]/analyze`：调用 AI 生成文本分析
+- `GET /api/analyses/[analysisId]`：读取分析详情
