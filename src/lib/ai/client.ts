@@ -10,6 +10,7 @@ export type ChatCompletionInput = {
   model?: string;
   messages: ChatMessage[];
   temperature?: number;
+  responseFormat?: "json_object" | "text";
 };
 
 export class AiConfigurationError extends Error {}
@@ -62,7 +63,9 @@ export async function createChatCompletion(input: ChatCompletionInput) {
         model: input.model ?? process.env.AI_DEFAULT_MODEL ?? provider.defaultModel,
         messages: input.messages,
         temperature: input.temperature ?? 0.4,
-        response_format: { type: "json_object" },
+        ...(input.responseFormat === "text"
+          ? {}
+          : { response_format: { type: input.responseFormat ?? "json_object" } }),
         stream: false,
       }),
     });

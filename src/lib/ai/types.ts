@@ -34,3 +34,32 @@ export type OutlineResult = {
 export type GenerateOutlineInput = GenerateBookPlanInput & {
   plan: BookPlanResult;
 };
+
+export type ChapterContextNode = {
+  title: string;
+  summary?: string | null;
+  writingGoal?: string | null;
+  suggestedWordCount?: number | null;
+};
+
+export type GenerateChapterInput = GenerateBookPlanInput & {
+  plan?: BookPlanResult | null;
+  currentNode: ChapterContextNode;
+  previousNode?: ChapterContextNode | null;
+  nextNode?: ChapterContextNode | null;
+};
+
+export type RewriteChapterAction =
+  | "expand"
+  | "shorten"
+  | "plain"
+  | "professional"
+  | "add_case"
+  | "summary"
+  | "quote";
+
+export type RewriteChapterInput = {
+  action: RewriteChapterAction;
+  title: string;
+  content: string;
+};

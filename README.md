@@ -1,6 +1,6 @@
 # AI 出书 SaaS
 
-AI 出书 SaaS v0.1，按 `ai-book-saas-codex-development-plan.md` 分 Phase 开发。当前完成 Phase 1-3：Next.js App Router、TypeScript、Tailwind CSS、shadcn/ui 风格组件、Drizzle + SQLite、注册登录、cookie session、管理员 seed、图书项目创建、AI 策划案生成、三级目录生成与编辑。
+AI 出书 SaaS v0.1，按 `ai-book-saas-codex-development-plan.md` 分 Phase 开发。当前完成 Phase 1-4：Next.js App Router、TypeScript、Tailwind CSS、shadcn/ui 风格组件、Drizzle + SQLite、注册登录、cookie session、管理员 seed、图书项目创建、AI 策划案生成、三级目录生成与编辑、正文工作台与版本历史。
 
 ## Getting Started
 
@@ -55,3 +55,14 @@ npm run build
 - `POST /api/projects/[projectId]/outline/nodes`：新增目录节点
 - `PATCH /api/outline/nodes/[nodeId]`：编辑目录节点
 - `DELETE /api/outline/nodes/[nodeId]`：删除目录节点及其子节点
+
+## Phase 4 路由
+
+- `/projects/[projectId]/studio`：正文工作台
+- `GET /api/projects/[projectId]/chapters`：按目录自动补齐并读取章节
+- `GET /api/chapters/[chapterId]`：读取章节正文
+- `PATCH /api/chapters/[chapterId]`：保存正文，可选择保存版本
+- `POST /api/chapters/[chapterId]/generate`：调用 AI 生成正文并记录版本
+- `POST /api/chapters/[chapterId]/rewrite`：调用 AI 改写正文并记录版本
+- `GET /api/chapters/[chapterId]/versions`：读取版本历史
+- `POST /api/chapters/[chapterId]/restore-version`：恢复版本并记录恢复历史

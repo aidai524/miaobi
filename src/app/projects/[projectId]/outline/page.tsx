@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, PenLine } from "lucide-react";
 import { OutlineEditor } from "@/components/outline/outline-editor";
 import { ProjectShell } from "@/components/project/project-shell";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { requireUser } from "@/lib/auth/session";
 import { buildOutlineTree, listProjectOutlineNodes } from "@/lib/outline/service";
 import { getProjectPlan, getUserProject } from "@/lib/projects/service";
@@ -43,10 +43,14 @@ export default async function ProjectOutlinePage({ params }: PageProps) {
           <h2 className="mt-1 text-2xl font-semibold text-zinc-950">{project.title || project.topic}</h2>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-600">{project.topic}</p>
         </div>
-        <Button variant="secondary" disabled title="Phase 4 开放">
+        <Link
+          className={cn(buttonVariants({ variant: "secondary" }), !tree.length && "pointer-events-none opacity-50")}
+          href={`/projects/${id}/studio`}
+          aria-disabled={!tree.length}
+        >
           <PenLine className="h-4 w-4" />
           进入正文工作台
-        </Button>
+        </Link>
       </div>
 
       {!plan ? (
