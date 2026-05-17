@@ -14,7 +14,7 @@ export const AI_PROVIDERS: AiProviderConfig[] = [
     label: "Apimart",
     baseUrlEnv: "APIMART_BASE_URL",
     apiKeyEnv: "APIMART_API_KEY",
-    defaultModel: "gpt-5",
+    defaultModel: "deepseek-v3.2",
   },
   {
     key: "openai",

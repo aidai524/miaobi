@@ -30,7 +30,7 @@ npm run dev
 - 默认数据库：`./data/database.sqlite`
 - 默认文件根目录：`./data`
 - 生产环境建议设置：`DATABASE_URL=file:/data/database.sqlite` 与 `STORAGE_ROOT=/data`
-- 默认 AI 服务商为 Apimart + `gpt-5`，需要配置 `APIMART_API_KEY` 和 `APIMART_BASE_URL`
+- 默认 AI 服务商为 Apimart + `deepseek-v3.2`，需要配置 `APIMART_API_KEY` 和 `APIMART_BASE_URL`
 - 其他服务商可通过 `AI_DEFAULT_PROVIDER`、`AI_DEFAULT_MODEL` 以及对应环境变量切换
 
 ## 常用命令
