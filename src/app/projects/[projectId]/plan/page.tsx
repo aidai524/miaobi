@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowRight, BookOpen } from "lucide-react";
 import { ProjectShell } from "@/components/project/project-shell";
 import { PlanGenerateButton } from "@/components/project/plan-generate-button";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireUser } from "@/lib/auth/session";
 import { getProjectPlan, getUserProject } from "@/lib/projects/service";
@@ -76,10 +76,10 @@ export default async function ProjectPlanPage({ params }: PageProps) {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <PlanGenerateButton projectId={project.id} hasPlan={Boolean(plan)} />
-          <Button variant="secondary" disabled title="Phase 3 开放">
+          <Link className={cn(buttonVariants({ variant: "secondary" }))} href={`/projects/${project.id}/outline`}>
             进入目录生成
             <ArrowRight className="h-4 w-4" />
-          </Button>
+          </Link>
         </div>
       </div>
 

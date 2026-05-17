@@ -1,6 +1,6 @@
 # AI 出书 SaaS
 
-AI 出书 SaaS v0.1，按 `ai-book-saas-codex-development-plan.md` 分 Phase 开发。当前完成 Phase 1-2：Next.js App Router、TypeScript、Tailwind CSS、shadcn/ui 风格组件、Drizzle + SQLite、注册登录、cookie session、管理员 seed、图书项目创建、AI 策划案生成接口与页面。
+AI 出书 SaaS v0.1，按 `ai-book-saas-codex-development-plan.md` 分 Phase 开发。当前完成 Phase 1-3：Next.js App Router、TypeScript、Tailwind CSS、shadcn/ui 风格组件、Drizzle + SQLite、注册登录、cookie session、管理员 seed、图书项目创建、AI 策划案生成、三级目录生成与编辑。
 
 ## Getting Started
 
@@ -46,3 +46,12 @@ npm run build
 - `/projects/new`：新建图书项目
 - `/projects/[projectId]/plan`：查看与生成图书策划案
 - `POST /api/projects/[projectId]/generate-plan`：调用 AI 并保存策划案
+
+## Phase 3 路由
+
+- `/projects/[projectId]/outline`：生成、查看、编辑三级目录
+- `POST /api/projects/[projectId]/generate-outline`：调用 AI 并覆盖生成完整目录
+- `GET /api/projects/[projectId]/outline`：读取目录节点与树形结构
+- `POST /api/projects/[projectId]/outline/nodes`：新增目录节点
+- `PATCH /api/outline/nodes/[nodeId]`：编辑目录节点
+- `DELETE /api/outline/nodes/[nodeId]`：删除目录节点及其子节点

@@ -18,3 +18,19 @@ export type GenerateBookPlanInput = {
   writingStyle?: string | null;
   expectedWordCount?: number | null;
 };
+
+export type OutlineNodeResult = {
+  title: string;
+  summary: string;
+  writingGoal: string;
+  suggestedWordCount?: number | null;
+  children?: OutlineNodeResult[];
+};
+
+export type OutlineResult = {
+  nodes: OutlineNodeResult[];
+};
+
+export type GenerateOutlineInput = GenerateBookPlanInput & {
+  plan: BookPlanResult;
+};
