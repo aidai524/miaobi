@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { BookOpen, FileText, Library, Settings } from "lucide-react";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,21 +9,25 @@ const modules = [
     title: "图书项目",
     description: "创建选题、生成策划案、维护目录与正文。",
     icon: BookOpen,
+    href: "/projects",
   },
   {
     title: "文本分析",
     description: "上传资料，提取结构、风格和可复用写作特征。",
     icon: FileText,
+    href: null,
   },
   {
     title: "图书与作者库",
     description: "沉淀公共灵感库，为新项目提供参考。",
     icon: Library,
+    href: null,
   },
   {
     title: "系统设置",
     description: "管理账号、AI 服务商和部署参数。",
     icon: Settings,
+    href: null,
   },
 ];
 
@@ -71,7 +76,13 @@ export default async function DashboardPage() {
                     <CardDescription>{item.description}</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-xs text-zinc-400">后续 Phase 开放</p>
+                    {item.href ? (
+                      <Link className="text-sm font-medium text-zinc-950 hover:underline" href={item.href}>
+                        进入模块
+                      </Link>
+                    ) : (
+                      <p className="text-xs text-zinc-400">后续 Phase 开放</p>
+                    )}
                   </CardContent>
                 </Card>
               ))}

@@ -1,6 +1,6 @@
 # AI 出书 SaaS
 
-AI 出书 SaaS v0.1，按 `ai-book-saas-codex-development-plan.md` 分 Phase 开发。当前完成 Phase 1 基础设施：Next.js App Router、TypeScript、Tailwind CSS、shadcn/ui 风格组件、Drizzle + SQLite、注册登录、cookie session、管理员 seed。
+AI 出书 SaaS v0.1，按 `ai-book-saas-codex-development-plan.md` 分 Phase 开发。当前完成 Phase 1-2：Next.js App Router、TypeScript、Tailwind CSS、shadcn/ui 风格组件、Drizzle + SQLite、注册登录、cookie session、管理员 seed、图书项目创建、AI 策划案生成接口与页面。
 
 ## Getting Started
 
@@ -30,7 +30,8 @@ npm run dev
 - 默认数据库：`./data/database.sqlite`
 - 默认文件根目录：`./data`
 - 生产环境建议设置：`DATABASE_URL=file:/data/database.sqlite` 与 `STORAGE_ROOT=/data`
-- 默认 AI 服务商预留为 Apimart + `gpt-5`，后续 Phase 接入具体调用链路。
+- 默认 AI 服务商为 Apimart + `gpt-5`，需要配置 `APIMART_API_KEY` 和 `APIMART_BASE_URL`
+- 其他服务商可通过 `AI_DEFAULT_PROVIDER`、`AI_DEFAULT_MODEL` 以及对应环境变量切换
 
 ## 常用命令
 
@@ -38,3 +39,10 @@ npm run dev
 npm run lint
 npm run build
 ```
+
+## Phase 2 路由
+
+- `/projects`：项目列表
+- `/projects/new`：新建图书项目
+- `/projects/[projectId]/plan`：查看与生成图书策划案
+- `POST /api/projects/[projectId]/generate-plan`：调用 AI 并保存策划案
