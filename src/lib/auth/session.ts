@@ -1,4 +1,3 @@
-import crypto from "node:crypto";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { NextResponse, type NextRequest } from "next/server";
@@ -11,17 +10,29 @@ const SESSION_DAYS = 30;
 
 export type CurrentUser = Pick<User, "id" | "email" | "nickname" | "role">;
 
-function hashToken(token: string) {
-  return crypto.createHash("sha256").update(token).digest("hex");
+function toHex(bytes: Uint8Array | ArrayBuffer) {
+  const values = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  return Array.from(values, (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+async function hashToken(token: string) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token));
+  return toHex(digest);
+}
+
+function createToken() {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return toHex(bytes);
 }
 
 export async function createSession(userId: number) {
-  const token = crypto.randomBytes(32).toString("hex");
+  const token = createToken();
   const expiresAt = new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000);
 
   await db.insert(authSessions).values({
     userId,
-    tokenHash: hashToken(token),
+    tokenHash: await hashToken(token),
     expiresAt: expiresAt.toISOString(),
   });
 
@@ -54,7 +65,7 @@ export async function deleteRequestSession(request: NextRequest) {
     return;
   }
 
-  await db.delete(authSessions).where(eq(authSessions.tokenHash, hashToken(token)));
+  await db.delete(authSessions).where(eq(authSessions.tokenHash, await hashToken(token)));
 }
 
 export async function getCurrentUser(): Promise<CurrentUser | null> {
@@ -75,7 +86,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     })
     .from(authSessions)
     .innerJoin(users, eq(authSessions.userId, users.id))
-    .where(and(eq(authSessions.tokenHash, hashToken(token)), gt(authSessions.expiresAt, now)))
+    .where(and(eq(authSessions.tokenHash, await hashToken(token)), gt(authSessions.expiresAt, now)))
     .limit(1);
 
   const row = rows[0];
@@ -95,6 +106,15 @@ export async function requireUser() {
   const user = await getCurrentUser();
   if (!user) {
     redirect("/login");
+  }
+
+  return user;
+}
+
+export async function requireAdmin() {
+  const user = await requireUser();
+  if (user.role !== "admin") {
+    redirect("/dashboard");
   }
 
   return user;

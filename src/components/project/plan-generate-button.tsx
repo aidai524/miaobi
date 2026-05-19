@@ -1,5 +1,6 @@
 "use client";
 
+import { apiError, readApiJson } from "@/lib/api-client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Sparkles } from "lucide-react";
@@ -19,11 +20,11 @@ export function PlanGenerateButton({ projectId, hasPlan }: PlanGenerateButtonPro
     setError("");
     setIsGenerating(true);
     const response = await fetch(`/api/projects/${projectId}/generate-plan`, { method: "POST" });
-    const result = await response.json().catch(() => ({}));
+    const result = await readApiJson(response);
     setIsGenerating(false);
 
     if (!response.ok) {
-      setError(result.error ?? "生成失败，请稍后重试");
+      setError(apiError(result, "生成失败，请稍后重试"));
       return;
     }
 

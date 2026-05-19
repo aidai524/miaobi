@@ -1,0 +1,43 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "main": ".open-next/worker.js",
+  "name": "ai-book-saas",
+  "compatibility_date": "2026-05-18",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "vars": {
+    "APP_RUNTIME": "cloudflare",
+    "AI_DEFAULT_PROVIDER": "apimart",
+    "AI_DEFAULT_MODEL": "deepseek-v3-0324"
+  },
+  "services": [
+    {
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "ai-book-saas"
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "ai-book-saas",
+      "database_id": "f1b6c0dd-f9ba-4282-a7c6-1aaadc71ea88",
+      "migrations_dir": "drizzle"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "AI_BOOK_BUCKET",
+      "bucket_name": "ai-book-saas-storage"
+    },
+    {
+      "binding": "NEXT_INC_CACHE_R2_BUCKET",
+      "bucket_name": "ai-book-saas-opennext-cache"
+    }
+  ],
+  "images": {
+    "binding": "IMAGES"
+  }
+}

@@ -1,6 +1,4 @@
-import fs from "node:fs/promises";
-import path from "node:path";
-import { getUploadsPath } from "@/lib/storage/paths";
+import { normalizeStorageKey, putObject } from "@/lib/storage";
 import {
   extractTextFromFile,
   getFileExtension,
@@ -19,13 +17,10 @@ export async function saveUploadedFile(userId: number, file: File) {
     throw new Error("仅支持 txt、md、docx、pdf 文件");
   }
 
-  const userDir = path.join(getUploadsPath(), String(userId));
-  await fs.mkdir(userDir, { recursive: true });
-
   const filename = `${Date.now()}_${sanitizeFilename(file.name)}`;
-  const storedPath = path.join(userDir, filename);
-  const buffer = Buffer.from(await file.arrayBuffer());
-  await fs.writeFile(storedPath, buffer);
+  const storedPath = normalizeStorageKey("uploads", userId, filename);
+  const buffer = await file.arrayBuffer();
+  await putObject(storedPath, buffer, file.type || undefined);
 
   const extractedText = await extractTextFromFile(storedPath, file.name);
 

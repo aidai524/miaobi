@@ -1,9 +1,14 @@
 "use client";
 
+import { apiError, readApiJson } from "@/lib/api-client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+
+type SaveModelResponse = {
+  model?: { id: number };
+};
 
 export function SaveModelButton({ analysisId }: { analysisId: number }) {
   const router = useRouter();
@@ -18,15 +23,17 @@ export function SaveModelButton({ analysisId }: { analysisId: number }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({}),
     });
-    const result = await response.json().catch(() => ({}));
+    const result = await readApiJson<SaveModelResponse>(response);
     setIsSaving(false);
 
     if (!response.ok) {
-      setError(result.error ?? "保存创作模型失败，请稍后重试");
+      setError(apiError(result, "保存创作模型失败，请稍后重试"));
       return;
     }
 
-    router.push(`/models/${result.model.id}`);
+    if (result.model) {
+      router.push(`/models/${result.model.id}`);
+    }
   }
 
   return (

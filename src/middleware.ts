@@ -1,9 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { SESSION_COOKIE_NAME } from "@/lib/auth/constants";
 
-const protectedPrefixes = ["/dashboard", "/projects", "/analyze", "/models"];
+const protectedPrefixes = ["/dashboard", "/projects", "/analyze", "/models", "/books", "/authors", "/admin"];
 
-export function proxy(request: NextRequest) {
+export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const needsAuth = protectedPrefixes.some((prefix) => pathname.startsWith(prefix));
 
@@ -17,5 +17,13 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/projects/:path*", "/analyze/:path*", "/models/:path*"],
+  matcher: [
+    "/dashboard/:path*",
+    "/projects/:path*",
+    "/analyze/:path*",
+    "/models/:path*",
+    "/books/:path*",
+    "/authors/:path*",
+    "/admin/:path*",
+  ],
 };

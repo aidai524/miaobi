@@ -1,8 +1,10 @@
 import { and, asc, eq, inArray, max } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { bookProjects, outlineNodes } from "@/lib/db/schema";
+import type { AppDb, AppDbTransaction } from "@/lib/db/types";
 import type { OutlineNodeResult } from "@/lib/ai/types";
 import { getUserProject } from "@/lib/projects/service";
+import { isCloudflareRuntime } from "@/lib/runtime";
 import type { OutlineNodeInput, OutlineNodeUpdateInput } from "./validation";
 
 export type OutlineNode = typeof outlineNodes.$inferSelect;
@@ -186,33 +188,44 @@ function collectDescendantIds(nodes: OutlineNode[], rootId: number) {
   return [...ids];
 }
 
-export async function replaceProjectOutline(projectId: number, nodes: OutlineNodeResult[]) {
-  await db.transaction((tx) => {
-    tx.delete(outlineNodes).where(eq(outlineNodes.projectId, projectId)).run();
+async function insertOutlineNodes(
+  tx: AppDb | AppDbTransaction,
+  projectId: number,
+  items: OutlineNodeResult[],
+  parentId: number | null,
+  level: number,
+) {
+  for (const [index, item] of items.entries()) {
+    const rows = await tx
+      .insert(outlineNodes)
+      .values({
+        projectId,
+        parentId,
+        level,
+        sortOrder: index + 1,
+        title: item.title,
+        summary: item.summary,
+        writingGoal: item.writingGoal,
+        suggestedWordCount: item.suggestedWordCount ?? null,
+      })
+      .returning();
 
-    function insertNodes(items: OutlineNodeResult[], parentId: number | null, level: number) {
-      items.forEach((item, index) => {
-        const result = tx
-          .insert(outlineNodes)
-          .values({
-            projectId,
-            parentId,
-            level,
-            sortOrder: index + 1,
-            title: item.title,
-            summary: item.summary,
-            writingGoal: item.writingGoal,
-            suggestedWordCount: item.suggestedWordCount ?? null,
-          })
-          .returning({ id: outlineNodes.id })
-          .get();
-
-        if (item.children?.length && level < 3) {
-          insertNodes(item.children, result.id, level + 1);
-        }
-      });
+    const inserted = rows[0];
+    if (inserted && item.children?.length && level < 3) {
+      await insertOutlineNodes(tx, projectId, item.children, inserted.id, level + 1);
     }
+  }
+}
 
-    insertNodes(nodes, null, 1);
+export async function replaceProjectOutline(projectId: number, nodes: OutlineNodeResult[]) {
+  if (isCloudflareRuntime()) {
+    await db.delete(outlineNodes).where(eq(outlineNodes.projectId, projectId));
+    await insertOutlineNodes(db, projectId, nodes, null, 1);
+    return;
+  }
+
+  await db.transaction(async (tx) => {
+    await tx.delete(outlineNodes).where(eq(outlineNodes.projectId, projectId));
+    await insertOutlineNodes(tx, projectId, nodes, null, 1);
   });
 }

@@ -77,6 +77,7 @@ export async function POST(_request: Request, context: RouteContext) {
     const nodes = await listProjectOutlineNodes(project.id, user.id);
     return NextResponse.json({ nodes, tree: buildOutlineTree(nodes ?? []) });
   } catch (error) {
+    console.error("generate-outline failed", error);
     return errorResponse(error, "生成目录失败，请稍后重试");
   }
 }

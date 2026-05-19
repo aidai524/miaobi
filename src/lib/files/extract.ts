@@ -1,7 +1,8 @@
-import fs from "node:fs/promises";
 import path from "node:path";
 import mammoth from "mammoth";
 import { PDFParse } from "pdf-parse";
+import { isCloudflareRuntime } from "@/lib/runtime";
+import { getObjectArrayBuffer, getObjectText } from "@/lib/storage";
 
 export const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
 export const SUPPORTED_EXTENSIONS = [".txt", ".md", ".docx", ".pdf"] as const;
@@ -27,20 +28,36 @@ export function sanitizeFilename(filename: string) {
   return `${base || "document"}${ext}`;
 }
 
-export async function extractTextFromFile(filePath: string, originalFilename: string) {
+export async function extractTextFromFile(storedKey: string, originalFilename: string) {
   const extension = getFileExtension(originalFilename);
 
   if (extension === ".txt" || extension === ".md") {
-    return fs.readFile(filePath, "utf8");
+    return (await getObjectText(storedKey)) ?? "";
   }
 
   if (extension === ".docx") {
-    const result = await mammoth.extractRawText({ path: filePath });
+    if (isCloudflareRuntime()) {
+      throw new Error("Cloudflare 部署暂不支持 docx 解析，请先上传 txt 或 md 文件");
+    }
+
+    const arrayBuffer = await getObjectArrayBuffer(storedKey);
+    if (!arrayBuffer) {
+      return "";
+    }
+    const result = await mammoth.extractRawText({ buffer: Buffer.from(arrayBuffer) });
     return result.value;
   }
 
   if (extension === ".pdf") {
-    const buffer = await fs.readFile(filePath);
+    if (isCloudflareRuntime()) {
+      throw new Error("Cloudflare 部署暂不支持 pdf 解析，请先上传 txt 或 md 文件");
+    }
+
+    const arrayBuffer = await getObjectArrayBuffer(storedKey);
+    if (!arrayBuffer) {
+      return "";
+    }
+    const buffer = Buffer.from(arrayBuffer);
     const parser = new PDFParse({ data: buffer });
     try {
       const result = await parser.getText();

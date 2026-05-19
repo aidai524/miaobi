@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { ArrowRight, Plus } from "lucide-react";
+import { ArrowRight, BookOpen, Clock, FileDown, FileText, Plus } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { ProjectShell } from "@/components/project/project-shell";
 import { requireUser } from "@/lib/auth/session";
 import { listUserProjects } from "@/lib/projects/service";
@@ -14,58 +15,70 @@ export default async function ProjectsPage() {
 
   return (
     <ProjectShell user={user}>
-      <div className="mb-6 flex flex-col justify-between gap-4 md:flex-row md:items-end">
-        <div>
-          <p className="text-sm font-medium text-zinc-500">Projects</p>
-          <h2 className="mt-1 text-2xl font-semibold text-zinc-950">图书项目</h2>
-          <p className="mt-2 text-sm leading-6 text-zinc-600">管理选题、策划案和后续写作流程。</p>
-        </div>
-        <Link className={cn(buttonVariants())} href="/projects/new">
-          <Plus className="h-4 w-4" />
-          新建项目
-        </Link>
-      </div>
-
-      {projects.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-zinc-300 bg-white p-10 text-center">
-          <h3 className="text-lg font-semibold text-zinc-950">还没有图书项目</h3>
-          <p className="mt-2 text-sm text-zinc-500">从一个主题开始，让 AI 先生成策划案。</p>
-          <Link className={cn(buttonVariants({ className: "mt-5" }))} href="/projects/new">
+      <div className="p-6">
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-text-primary">我的书籍</h2>
+            <p className="mt-1 text-sm text-text-muted">管理所有书籍项目，继续编辑或创建新书</p>
+          </div>
+          <Link className={cn(buttonVariants())} href="/projects/new">
             <Plus className="h-4 w-4" />
-            创建第一个项目
+            创建新书
           </Link>
         </div>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {projects.map((project) => (
-            <Card key={project.id} className="flex flex-col">
-              <CardHeader>
-                <CardTitle className="line-clamp-2 text-base">{project.title || project.topic}</CardTitle>
-                <CardDescription className="line-clamp-3">{project.topic}</CardDescription>
-              </CardHeader>
-              <CardContent className="mt-auto space-y-4">
-                <div className="grid gap-2 text-sm text-zinc-500">
-                  <div className="flex justify-between gap-4">
-                    <span>状态</span>
-                    <span className="font-medium text-zinc-800">{project.status}</span>
+
+        {projects.length === 0 ? (
+          <div className="py-20 text-center">
+            <BookOpen className="mx-auto mb-4 h-12 w-12 text-text-muted" />
+            <p className="mb-4 text-sm text-text-muted">还没有书籍项目</p>
+            <Link className={cn(buttonVariants())} href="/projects/new">
+              <Plus className="h-4 w-4" />
+              创建第一本书
+            </Link>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {projects.map((project) => (
+              <Card key={project.id} className="flex flex-col transition-shadow hover:shadow-md">
+                <CardContent className="flex flex-1 flex-col">
+                  <div className="mb-3 flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="truncate text-sm font-semibold text-text-primary">{project.title || project.topic}</h3>
+                      <p className="mt-0.5 line-clamp-2 text-xs text-text-muted">{project.topic}</p>
+                    </div>
+                    <Badge variant="secondary" className="shrink-0 text-[10px]">
+                      {project.status}
+                    </Badge>
                   </div>
-                  <div className="flex justify-between gap-4">
-                    <span>更新时间</span>
-                    <span className="text-zinc-800">{formatDateTime(project.updatedAt)}</span>
+
+                  <div className="mb-4 flex items-center gap-2 text-xs text-text-muted">
+                    <Clock className="h-3 w-3" />
+                    {formatDateTime(project.updatedAt)}
                   </div>
-                </div>
-                <Link
-                  className={cn(buttonVariants({ variant: "outline" }), "w-full")}
-                  href={`/projects/${project.id}/plan`}
-                >
-                  查看策划案
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+
+                  <div className="mt-auto grid gap-2">
+                    <Link
+                      className={cn(buttonVariants({ variant: "outline", size: "sm" }), "w-full")}
+                      href={`/projects/${project.id}/plan`}
+                    >
+                      <FileText className="h-3.5 w-3.5" />
+                      继续编辑
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    </Link>
+                    <Link
+                      className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "w-full")}
+                      href={`/projects/${project.id}/export`}
+                    >
+                      <FileDown className="h-3.5 w-3.5" />
+                      导出
+                    </Link>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
     </ProjectShell>
   );
 }

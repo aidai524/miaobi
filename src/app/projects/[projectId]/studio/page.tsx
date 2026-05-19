@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, FileDown } from "lucide-react";
 import { ChapterStudio } from "@/components/studio/chapter-studio";
 import { ProjectShell } from "@/components/project/project-shell";
 import { buttonVariants } from "@/components/ui/button";
@@ -35,14 +35,24 @@ export default async function ProjectStudioPage({ params }: PageProps) {
 
   return (
     <ProjectShell user={user}>
-      <div className="mb-6">
-        <Link className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "-ml-3 mb-3")} href={`/projects/${id}/outline`}>
-          <ArrowLeft className="h-4 w-4" />
-          返回目录
+      <div className="mb-6 flex flex-col justify-between gap-4 xl:flex-row xl:items-end">
+        <div>
+          <Link className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "-ml-3 mb-3")} href={`/projects/${id}/outline`}>
+            <ArrowLeft className="h-4 w-4" />
+            返回目录
+          </Link>
+          <p className="text-sm font-medium text-zinc-500">正文工作台</p>
+          <h2 className="mt-1 text-2xl font-semibold text-zinc-950">{project.title || project.topic}</h2>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-600">{project.topic}</p>
+        </div>
+        <Link
+          className={cn(buttonVariants({ variant: "secondary" }), !outlineTree.length && "pointer-events-none opacity-50")}
+          href={`/projects/${id}/export`}
+          aria-disabled={!outlineTree.length}
+        >
+          <FileDown className="h-4 w-4" />
+          导出 Markdown
         </Link>
-        <p className="text-sm font-medium text-zinc-500">正文工作台</p>
-        <h2 className="mt-1 text-2xl font-semibold text-zinc-950">{project.title || project.topic}</h2>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-600">{project.topic}</p>
       </div>
 
       {outlineTree.length ? (

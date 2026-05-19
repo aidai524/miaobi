@@ -1,5 +1,6 @@
 "use client";
 
+import { apiError, readApiJson } from "@/lib/api-client";
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -16,6 +17,11 @@ type DocumentItem = {
   fileSize: number | null;
   status: string;
   createdAt: string;
+};
+
+type AnalyzeResponse = {
+  document?: DocumentItem;
+  analysis?: { id: number };
 };
 
 const analysisTypes = [
@@ -54,16 +60,19 @@ export function AnalyzeClient({ initialDocuments }: { initialDocuments: Document
       method: "POST",
       body: formData,
     });
-    const result = await response.json().catch(() => ({}));
+    const result = await readApiJson<AnalyzeResponse>(response);
     setIsUploading(false);
 
     if (!response.ok) {
-      setError(result.error ?? "上传成功，但文本解析失败");
+      setError(apiError(result, "上传成功，但文本解析失败"));
       return;
     }
 
-    setDocuments((items) => [result.document, ...items]);
-    setSelectedDocumentId(result.document.id);
+    if (result.document) {
+      const document = result.document;
+      setDocuments((items) => [document, ...items]);
+      setSelectedDocumentId(document.id);
+    }
     router.refresh();
   }
 
@@ -80,15 +89,17 @@ export function AnalyzeClient({ initialDocuments }: { initialDocuments: Document
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ analysisType }),
     });
-    const result = await response.json().catch(() => ({}));
+    const result = await readApiJson<AnalyzeResponse>(response);
     setIsAnalyzing(false);
 
     if (!response.ok) {
-      setError(result.error ?? "AI 分析未完成，请重新发起");
+      setError(apiError(result, "AI 分析未完成，请重新发起"));
       return;
     }
 
-    router.push(`/analyze/${result.analysis.id}`);
+    if (result.analysis) {
+      router.push(`/analyze/${result.analysis.id}`);
+    }
   }
 
   return (

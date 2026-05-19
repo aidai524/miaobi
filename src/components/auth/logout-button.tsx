@@ -5,7 +5,13 @@ import { useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export function LogoutButton() {
+export function LogoutButton({
+  variant = "default",
+  children,
+}: {
+  variant?: "default" | "icon";
+  children?: React.ReactNode;
+}) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -17,9 +23,19 @@ export function LogoutButton() {
   }
 
   return (
-    <Button variant="outline" size="sm" onClick={logout} disabled={isSubmitting}>
-      <LogOut className="h-4 w-4" />
-      退出登录
+    <Button
+      variant={variant === "icon" ? "ghost" : "outline"}
+      size={variant === "icon" ? "icon" : "sm"}
+      className={variant === "icon" ? "h-8 w-8 rounded-lg" : undefined}
+      onClick={logout}
+      disabled={isSubmitting}
+    >
+      {children ?? (
+        <>
+          <LogOut className="h-4 w-4" />
+          退出登录
+        </>
+      )}
     </Button>
   );
 }

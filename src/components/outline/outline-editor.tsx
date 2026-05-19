@@ -1,5 +1,6 @@
 "use client";
 
+import { apiError, readApiJson } from "@/lib/api-client";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronRight, Loader2, Plus, Save, Sparkles, Trash2 } from "lucide-react";
@@ -34,6 +35,11 @@ type Draft = {
 type OutlineEditorProps = {
   projectId: number;
   initialTree: OutlineTreeNode[];
+};
+
+type OutlineResponse = {
+  tree?: OutlineTreeNode[];
+  node?: OutlineTreeNode;
 };
 
 function flattenTree(nodes: OutlineTreeNode[]) {
@@ -129,10 +135,10 @@ export function OutlineEditor({ projectId, initialTree }: OutlineEditorProps) {
         ...options.headers,
       },
     });
-    const result = await response.json().catch(() => ({}));
+    const result = await readApiJson<OutlineResponse>(response);
 
     if (!response.ok) {
-      throw new Error(result.error ?? "操作失败，请稍后重试");
+      throw new Error(apiError(result, "操作失败，请稍后重试"));
     }
 
     return result;
@@ -188,9 +194,11 @@ export function OutlineEditor({ projectId, initialTree }: OutlineEditorProps) {
           suggestedWordCount: null,
         }),
       });
-      setSelectedId(result.node.id);
-      setDraftNodeId(result.node.id);
-      setDraft(makeDraft(result.node));
+      if (result.node) {
+        setSelectedId(result.node.id);
+        setDraftNodeId(result.node.id);
+        setDraft(makeDraft(result.node));
+      }
     });
   }
 

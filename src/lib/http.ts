@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { AiConfigurationError, AiProviderError } from "@/lib/ai/client";
+import { AiJsonParseError } from "@/lib/ai/json";
 
 export function parseId(value: string | undefined) {
   const id = Number(value);
@@ -18,6 +19,10 @@ export function errorResponse(error: unknown, fallback = "请求失败，请稍�
 
   if (error instanceof AiProviderError) {
     return NextResponse.json({ error: error.message }, { status: 502 });
+  }
+
+  if (error instanceof AiJsonParseError) {
+    return NextResponse.json({ error: "AI 返回格式不符合要求，请稍后重试" }, { status: 502 });
   }
 
   return NextResponse.json({ error: fallback }, { status: 500 });

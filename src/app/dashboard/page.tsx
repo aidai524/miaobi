@@ -1,8 +1,10 @@
 import Link from "next/link";
-import { BookOpen, FileText, Layers, Settings } from "lucide-react";
-import { LogoutButton } from "@/components/auth/logout-button";
+import { ArrowRight, BookOpen, FileText, Layers, Library, PenLine, Settings, Sparkles, Upload } from "lucide-react";
+import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ProjectShell } from "@/components/project/project-shell";
 import { requireUser } from "@/lib/auth/session";
+import { cn } from "@/lib/utils";
 
 const modules = [
   {
@@ -24,6 +26,18 @@ const modules = [
     href: "/models",
   },
   {
+    title: "图书库",
+    description: "浏览公共图书资料，按书名、作者和分类寻找新书灵感。",
+    icon: Library,
+    href: "/books",
+  },
+  {
+    title: "作者库",
+    description: "查看作者领域、代表作和风格标签，辅助建立参考范式。",
+    icon: PenLine,
+    href: "/authors",
+  },
+  {
     title: "系统设置",
     description: "管理账号、AI 服务商和部署参数。",
     icon: Settings,
@@ -35,61 +49,61 @@ export default async function DashboardPage() {
   const user = await requireUser();
 
   return (
-    <main className="min-h-screen bg-zinc-100">
-      <div className="mx-auto flex min-h-screen w-full max-w-7xl">
-        <aside className="hidden w-64 shrink-0 border-r border-zinc-200 bg-white px-5 py-6 lg:block">
-          <div className="text-lg font-semibold text-zinc-950">AI 出书工作台</div>
-          <nav className="mt-8 space-y-1 text-sm">
-            <a className="block rounded-md bg-zinc-950 px-3 py-2 text-white" href="/dashboard">
-              控制台
-            </a>
-            <span className="block rounded-md px-3 py-2 text-zinc-500">项目</span>
-            <span className="block rounded-md px-3 py-2 text-zinc-500">分析</span>
-            <span className="block rounded-md px-3 py-2 text-zinc-500">模型</span>
-          </nav>
-        </aside>
-
-        <section className="flex min-w-0 flex-1 flex-col">
-          <header className="flex items-center justify-between border-b border-zinc-200 bg-white px-5 py-4">
-            <div>
-              <p className="text-sm text-zinc-500">欢迎回来</p>
-              <h1 className="text-xl font-semibold text-zinc-950">{user.nickname || user.email}</h1>
-            </div>
-            <LogoutButton />
-          </header>
-
-          <div className="flex-1 px-5 py-6">
-            <div className="mb-6 rounded-lg border border-zinc-200 bg-white p-6">
-              <p className="text-sm font-medium text-zinc-500">Phase 1</p>
-              <h2 className="mt-2 text-2xl font-semibold text-zinc-950">基础设施已就绪</h2>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-600">
-                当前已包含注册登录、SQLite 数据层、会话保护和后台基础布局。下一阶段会开始图书项目与 AI 策划案。
+    <ProjectShell user={user}>
+      <div className="space-y-8 p-6">
+        <section className="rounded-2xl border border-border-light bg-bg-card p-8 shadow-sm">
+          <div className="flex items-start gap-6">
+            <div className="flex-1">
+              <h2 className="text-2xl font-bold leading-tight text-text-primary">
+                让任何人，都能完成一本真正像样的书
+              </h2>
+              <p className="mt-2 max-w-2xl leading-relaxed text-text-secondary">
+                从选题定位、标杆分析、目录设计，到章节写作与书稿导出，一站完成。
               </p>
+              <div className="mt-6 flex flex-wrap items-center gap-3">
+                <Link className={cn(buttonVariants({ size: "lg" }))} href="/projects/new">
+                  <Sparkles className="h-4 w-4" />
+                  创建我的第一本书
+                </Link>
+                <Link className={cn(buttonVariants({ variant: "outline", size: "lg" }))} href="/analyze">
+                  <Upload className="h-4 w-4" />
+                  上传文本，生成创作模型
+                </Link>
+              </div>
             </div>
-
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              {modules.map((item) => (
-                <Card key={item.title}>
-                  <CardHeader>
-                    <item.icon className="h-5 w-5 text-zinc-700" />
-                    <CardTitle className="text-base">{item.title}</CardTitle>
-                    <CardDescription>{item.description}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {item.href ? (
-                      <Link className="text-sm font-medium text-zinc-950 hover:underline" href={item.href}>
-                        进入模块
-                      </Link>
-                    ) : (
-                      <p className="text-xs text-zinc-400">后续 Phase 开放</p>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
+            <div className="hidden h-36 w-48 items-center justify-center rounded-2xl bg-accent-light lg:flex">
+              <BookOpen className="h-16 w-16 text-accent/40" />
             </div>
           </div>
         </section>
+
+        <section>
+          <h3 className="mb-4 text-sm font-semibold text-text-primary">功能模块</h3>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {modules.map((item) => (
+              <Card key={item.title} className="transition-shadow hover:shadow-md">
+                <CardHeader>
+                  <div className="mb-3 flex h-8 w-8 items-center justify-center rounded-lg bg-accent-light">
+                    <item.icon className="h-4 w-4 text-accent" />
+                  </div>
+                  <CardTitle>{item.title}</CardTitle>
+                  <CardDescription>{item.description}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {item.href ? (
+                    <Link className="inline-flex items-center gap-1 text-sm font-medium text-accent hover:underline" href={item.href}>
+                      进入模块
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    </Link>
+                  ) : (
+                    <p className="text-xs text-text-muted">后续开放</p>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </section>
       </div>
-    </main>
+    </ProjectShell>
   );
 }

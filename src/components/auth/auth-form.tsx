@@ -1,5 +1,6 @@
 "use client";
 
+import { apiError, readApiJson } from "@/lib/api-client";
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -40,11 +41,11 @@ export function AuthForm({ mode }: AuthFormProps) {
       body: JSON.stringify(payload),
     });
 
-    const result = await response.json().catch(() => ({}));
+    const result = await readApiJson(response);
     setIsSubmitting(false);
 
     if (!response.ok) {
-      setError(result.error ?? "操作失败，请稍后重试");
+      setError(apiError(result, "操作失败，请稍后重试"));
       return;
     }
 

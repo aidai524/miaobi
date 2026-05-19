@@ -1,5 +1,6 @@
 "use client";
 
+import { apiError, readApiJson } from "@/lib/api-client";
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Sparkles } from "lucide-react";
@@ -16,9 +17,19 @@ type ReferenceModelOption = {
 type ProjectCreateFormProps = {
   models?: ReferenceModelOption[];
   defaultReferenceModelId?: number;
+  defaults?: {
+    topic?: string;
+    targetReader?: string;
+    bookType?: string;
+    writingStyle?: string;
+  };
 };
 
-export function ProjectCreateForm({ models = [], defaultReferenceModelId }: ProjectCreateFormProps) {
+type CreateProjectResponse = {
+  project?: { id: number };
+};
+
+export function ProjectCreateForm({ models = [], defaultReferenceModelId, defaults = {} }: ProjectCreateFormProps) {
   const router = useRouter();
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -43,15 +54,17 @@ export function ProjectCreateForm({ models = [], defaultReferenceModelId }: Proj
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-    const result = await response.json().catch(() => ({}));
+    const result = await readApiJson<CreateProjectResponse>(response);
     setIsSubmitting(false);
 
     if (!response.ok) {
-      setError(result.error ?? "创建项目失败，请稍后重试");
+      setError(apiError(result, "创建项目失败，请稍后重试"));
       return;
     }
 
-    router.push(`/projects/${result.project.id}/plan`);
+    if (result.project) {
+      router.push(`/projects/${result.project.id}/plan`);
+    }
     router.refresh();
   }
 
@@ -62,28 +75,47 @@ export function ProjectCreateForm({ models = [], defaultReferenceModelId }: Proj
         <Textarea
           id="topic"
           name="topic"
-          className="min-h-28"
+          className="min-h-[140px]"
           placeholder="例如：面向中小企业老板的 AI 提效实战手册"
+          defaultValue={defaults.topic}
           required
         />
+        <p className="text-xs text-text-muted">
+          描述越具体，策划案越精准。可以包含你的核心观点、目标读者群、希望达到的效果。
+        </p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="targetReader">目标读者</Label>
-          <Input id="targetReader" name="targetReader" placeholder="例如：创业者、管理者、自由职业者" />
+          <Input
+            id="targetReader"
+            name="targetReader"
+            defaultValue={defaults.targetReader}
+            placeholder="例如：创业者、管理者、自由职业者"
+          />
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="bookType">书籍类型</Label>
-          <Input id="bookType" name="bookType" placeholder="例如：商业、教育、方法论、个人成长" />
+          <Input
+            id="bookType"
+            name="bookType"
+            defaultValue={defaults.bookType}
+            placeholder="例如：商业、教育、方法论、个人成长"
+          />
         </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="writingStyle">写作风格</Label>
-          <Input id="writingStyle" name="writingStyle" placeholder="例如：专业但通俗、案例丰富" />
+          <Input
+            id="writingStyle"
+            name="writingStyle"
+            defaultValue={defaults.writingStyle}
+            placeholder="例如：专业但通俗、案例丰富"
+          />
         </div>
 
         <div className="space-y-2">
@@ -99,7 +131,7 @@ export function ProjectCreateForm({ models = [], defaultReferenceModelId }: Proj
             id="referenceModelId"
             name="referenceModelId"
             defaultValue={defaultReferenceModelId ?? ""}
-            className="flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-950 shadow-sm outline-none transition-colors focus:border-zinc-400 focus:ring-2 focus:ring-zinc-100"
+            className="flex h-10 w-full rounded-xl border border-border bg-bg-card px-3 py-2 text-sm text-text-primary shadow-sm outline-none transition-colors focus:border-accent focus:ring-2 focus:ring-accent/10"
           >
             <option value="">不使用创作模型</option>
             {models.map((model) => (
@@ -108,13 +140,13 @@ export function ProjectCreateForm({ models = [], defaultReferenceModelId }: Proj
               </option>
             ))}
           </select>
-          <p className="text-xs text-zinc-500">选择后，策划案和目录生成会读取该模型的结构、风格和写作约束。</p>
+          <p className="text-xs text-text-muted">选择后，策划案和目录生成会读取该模型的结构、风格和写作约束。</p>
         </div>
       ) : null}
 
-      {error ? <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p> : null}
+      {error ? <p className="rounded-xl bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p> : null}
 
-      <Button type="submit" disabled={isSubmitting}>
+      <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
         {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
         生成图书策划
       </Button>

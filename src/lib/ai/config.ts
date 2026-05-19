@@ -1,3 +1,5 @@
+import { getEnvValue } from "@/lib/env";
+
 export type AiProviderKey = "apimart" | "openai" | "deepseek" | "qwen" | "zhipu";
 
 export type AiProviderConfig = {
@@ -14,7 +16,7 @@ export const AI_PROVIDERS: AiProviderConfig[] = [
     label: "Apimart",
     baseUrlEnv: "APIMART_BASE_URL",
     apiKeyEnv: "APIMART_API_KEY",
-    defaultModel: "deepseek-v3.2",
+    defaultModel: "deepseek-v3-0324",
   },
   {
     key: "openai",
@@ -47,6 +49,6 @@ export const AI_PROVIDERS: AiProviderConfig[] = [
 ];
 
 export function getDefaultAiProvider() {
-  const configured = process.env.AI_DEFAULT_PROVIDER as AiProviderKey | undefined;
+  const configured = getEnvValue("AI_DEFAULT_PROVIDER") as AiProviderKey | undefined;
   return AI_PROVIDERS.find((provider) => provider.key === configured) ?? AI_PROVIDERS[0];
 }

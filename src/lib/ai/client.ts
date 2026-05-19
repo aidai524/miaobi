@@ -1,4 +1,5 @@
 import { getDefaultAiProvider, type AiProviderKey, AI_PROVIDERS } from "./config";
+import { getEnvValue } from "@/lib/env";
 
 export type ChatMessage = {
   role: "system" | "user" | "assistant";
@@ -10,11 +11,20 @@ export type ChatCompletionInput = {
   model?: string;
   messages: ChatMessage[];
   temperature?: number;
+  maxTokens?: number;
+  timeoutMs?: number;
   responseFormat?: "json_object" | "text";
 };
 
 export class AiConfigurationError extends Error {}
-export class AiProviderError extends Error {}
+export class AiProviderError extends Error {
+  constructor(
+    message: string,
+    public readonly code?: "timeout" | "request",
+  ) {
+    super(message);
+  }
+}
 
 const DEFAULT_TIMEOUT_MS = 120_000;
 
@@ -29,6 +39,24 @@ function getProvider(key?: AiProviderKey) {
 
 function buildChatCompletionsUrl(baseUrl: string) {
   const normalized = baseUrl.replace(/\/$/, "");
+  if (normalized.includes("apimart.ai")) {
+    if (normalized.endsWith("/api/v1/chat/completions")) {
+      return normalized;
+    }
+    if (normalized.endsWith("/v1/chat/completions")) {
+      return normalized.replace(/\/v1\/chat\/completions$/, "/api/v1/chat/completions");
+    }
+    if (normalized.endsWith("/api/v1")) {
+      return `${normalized}/chat/completions`;
+    }
+    if (normalized.endsWith("/v1")) {
+      return normalized.replace(/\/v1$/, "/api/v1/chat/completions");
+    }
+    if (normalized.endsWith("/api")) {
+      return `${normalized}/v1/chat/completions`;
+    }
+    return `${normalized}/api/v1/chat/completions`;
+  }
   if (normalized.endsWith("/chat/completions")) {
     return normalized;
   }
@@ -40,15 +68,15 @@ function buildChatCompletionsUrl(baseUrl: string) {
 
 export async function createChatCompletion(input: ChatCompletionInput) {
   const provider = getProvider(input.provider);
-  const apiKey = process.env[provider.apiKeyEnv];
-  const baseUrl = process.env[provider.baseUrlEnv];
+  const apiKey = getEnvValue(provider.apiKeyEnv);
+  const baseUrl = getEnvValue(provider.baseUrlEnv);
 
   if (!apiKey || !baseUrl) {
     throw new AiConfigurationError(`请配置 ${provider.apiKeyEnv} 和 ${provider.baseUrlEnv}`);
   }
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS);
+  const timeout = setTimeout(() => controller.abort(), input.timeoutMs ?? DEFAULT_TIMEOUT_MS);
   let response: Response;
 
   try {
@@ -60,9 +88,10 @@ export async function createChatCompletion(input: ChatCompletionInput) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: input.model ?? process.env.AI_DEFAULT_MODEL ?? provider.defaultModel,
+        model: input.model ?? getEnvValue("AI_DEFAULT_MODEL") ?? provider.defaultModel,
         messages: input.messages,
         temperature: input.temperature ?? 0.4,
+        ...(typeof input.maxTokens === "number" ? { max_tokens: input.maxTokens } : {}),
         ...(input.responseFormat === "text"
           ? {}
           : { response_format: { type: input.responseFormat ?? "json_object" } }),
@@ -71,25 +100,41 @@ export async function createChatCompletion(input: ChatCompletionInput) {
     });
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
-      throw new AiProviderError("AI 请求超时，请稍后重试");
+      throw new AiProviderError("AI 请求超时，请稍后重试", "timeout");
     }
 
-    throw error;
+    throw new AiProviderError(
+      error instanceof Error ? `AI 请求失败：${error.message}` : "AI 请求失败，请稍后重试",
+      "request",
+    );
   } finally {
     clearTimeout(timeout);
   }
 
-  const text = await response.text();
+  let text: string;
+  try {
+    text = await response.text();
+  } catch (error) {
+    throw new AiProviderError(
+      error instanceof Error ? `AI 响应读取失败：${error.message}` : "AI 响应读取失败，请稍后重试",
+      "request",
+    );
+  }
   const payload = parseProviderPayload(text);
+
+  if (payload?.code && payload.code !== 200) {
+    const message = payload.message ?? payload.error?.message ?? `AI 请求失败：${payload.code}`;
+    throw new AiProviderError(message, "request");
+  }
 
   if (!response.ok) {
     const message = payload?.error?.message ?? payload?.message ?? `AI 请求失败：${response.status}`;
-    throw new AiProviderError(message);
+    throw new AiProviderError(message, "request");
   }
 
   const content = getContentFromPayload(payload);
   if (typeof content !== "string" || !content.trim()) {
-    throw new AiProviderError("AI 返回内容为空");
+    throw new AiProviderError("AI 返回内容为空", "request");
   }
 
   return content;
@@ -142,6 +187,16 @@ function parseSsePayload(text: string) {
 }
 
 function getContentFromPayload(payload: {
+  code?: number;
+  data?: {
+    choices?: Array<{
+      message?: { content?: unknown };
+      delta?: { content?: unknown };
+      text?: unknown;
+    }>;
+    output_text?: unknown;
+    content?: unknown;
+  };
   choices?: Array<{
     message?: { content?: unknown };
     delta?: { content?: unknown };
@@ -154,11 +209,12 @@ function getContentFromPayload(payload: {
     return null;
   }
 
+  const source = payload.data ?? payload;
   return (
-    payload.choices?.[0]?.message?.content ??
-    payload.choices?.[0]?.delta?.content ??
-    payload.choices?.[0]?.text ??
-    payload.output_text ??
-    payload.content
+    source.choices?.[0]?.message?.content ??
+    source.choices?.[0]?.delta?.content ??
+    source.choices?.[0]?.text ??
+    source.output_text ??
+    source.content
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { apiError, readApiJson } from "@/lib/api-client";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FileClock, Loader2, RotateCcw, Save, Sparkles } from "lucide-react";
@@ -47,6 +48,11 @@ type ChapterStudioProps = {
   outlineTree: OutlineTreeNode[];
   initialChapters: ChapterItem[];
   initialVersions: ChapterVersion[];
+};
+
+type ChapterResponse = {
+  chapter?: ChapterItem;
+  versions?: ChapterVersion[];
 };
 
 const rewriteActions = [
@@ -155,10 +161,10 @@ export function ChapterStudio({ outlineTree, initialChapters, initialVersions }:
         ...options.headers,
       },
     });
-    const result = await response.json().catch(() => ({}));
+    const result = await readApiJson<ChapterResponse>(response);
 
     if (!response.ok) {
-      throw new Error(result.error ?? "操作失败，请稍后重试");
+      throw new Error(apiError(result, "操作失败，请稍后重试"));
     }
 
     return result;
@@ -199,7 +205,9 @@ export function ChapterStudio({ outlineTree, initialChapters, initialVersions }:
         method: "PATCH",
         body: JSON.stringify({ title, content, createVersion }),
       });
-      updateChapterState(result.chapter);
+      if (result.chapter) {
+        updateChapterState(result.chapter);
+      }
       await loadVersions(selectedChapter.id);
     });
   }
@@ -211,7 +219,9 @@ export function ChapterStudio({ outlineTree, initialChapters, initialVersions }:
 
     await runAction("generate", async () => {
       const result = await request(`/api/chapters/${selectedChapter.id}/generate`, { method: "POST" });
-      updateChapterState(result.chapter);
+      if (result.chapter) {
+        updateChapterState(result.chapter);
+      }
       await loadVersions(selectedChapter.id);
     });
   }
@@ -226,7 +236,9 @@ export function ChapterStudio({ outlineTree, initialChapters, initialVersions }:
         method: "POST",
         body: JSON.stringify({ action }),
       });
-      updateChapterState(result.chapter);
+      if (result.chapter) {
+        updateChapterState(result.chapter);
+      }
       await loadVersions(selectedChapter.id);
     });
   }
@@ -241,7 +253,9 @@ export function ChapterStudio({ outlineTree, initialChapters, initialVersions }:
         method: "POST",
         body: JSON.stringify({ versionId }),
       });
-      updateChapterState(result.chapter);
+      if (result.chapter) {
+        updateChapterState(result.chapter);
+      }
       await loadVersions(selectedChapter.id);
     });
   }

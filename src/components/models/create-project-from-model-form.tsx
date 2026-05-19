@@ -1,5 +1,6 @@
 "use client";
 
+import { apiError, readApiJson } from "@/lib/api-client";
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Plus } from "lucide-react";
@@ -7,6 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+
+type CreateProjectResponse = {
+  project?: { id: number };
+};
 
 export function CreateProjectFromModelForm({ modelId }: { modelId: number }) {
   const router = useRouter();
@@ -30,15 +35,17 @@ export function CreateProjectFromModelForm({ modelId }: { modelId: number }) {
         expectedWordCount: String(formData.get("expectedWordCount") ?? ""),
       }),
     });
-    const result = await response.json().catch(() => ({}));
+    const result = await readApiJson<CreateProjectResponse>(response);
     setIsSubmitting(false);
 
     if (!response.ok) {
-      setError(result.error ?? "基于模型创建新书失败，请稍后重试");
+      setError(apiError(result, "基于模型创建新书失败，请稍后重试"));
       return;
     }
 
-    router.push(`/projects/${result.project.id}/plan`);
+    if (result.project) {
+      router.push(`/projects/${result.project.id}/plan`);
+    }
   }
 
   return (

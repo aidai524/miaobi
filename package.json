@@ -5,12 +5,24 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:next:cf": "APP_RUNTIME=cloudflare next build --webpack",
+    "build:cf": "APP_RUNTIME=cloudflare opennextjs-cloudflare build",
+    "preview:cf": "APP_RUNTIME=cloudflare opennextjs-cloudflare preview",
+    "deploy:cf": "APP_RUNTIME=cloudflare opennextjs-cloudflare deploy",
+    "cf:typegen": "wrangler types",
+    "db:generate": "drizzle-kit generate",
+    "db:generate:cf": "drizzle-kit generate --config drizzle.cloudflare.config.ts",
+    "db:migrate:cf:local": "wrangler d1 migrations apply DB --local",
+    "db:migrate:cf": "wrangler d1 migrations apply DB --remote",
+    "db:seed:cf:local": "tsx scripts/seed-cloudflare.ts",
+    "db:seed:cf": "tsx scripts/seed-cloudflare.ts --remote",
     "start": "next start",
     "lint": "eslint",
     "db:push": "drizzle-kit push",
     "db:seed": "tsx scripts/seed.ts"
   },
   "dependencies": {
+    "@opennextjs/cloudflare": "^1.19.10",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.10.0",
     "class-variance-authority": "^0.7.1",
@@ -26,6 +38,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260518.1",
     "@tailwindcss/postcss": "^4",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^20",
@@ -36,6 +49,7 @@
     "eslint-config-next": "16.2.6",
     "tailwindcss": "^4",
     "tsx": "^4.22.1",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wrangler": "^4.92.0"
   }
 }

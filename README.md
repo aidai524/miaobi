@@ -1,6 +1,6 @@
 # AI 出书 SaaS
 
-AI 出书 SaaS v0.1，按 `ai-book-saas-codex-development-plan.md` 分 Phase 开发。当前完成 Phase 1-6：Next.js App Router、TypeScript、Tailwind CSS、shadcn/ui 风格组件、Drizzle + SQLite、注册登录、cookie session、管理员 seed、图书项目创建、AI 策划案生成、三级目录生成与编辑、正文工作台与版本历史、文件上传与文本分析、创作模型沉淀与复用。
+AI 出书 SaaS v0.1，按 `ai-book-saas-codex-development-plan.md` 分 Phase 开发。当前完成 Phase 1-8：Next.js App Router、TypeScript、Tailwind CSS、shadcn/ui 风格组件、Drizzle + SQLite、注册登录、cookie session、管理员 seed、图书项目创建、AI 策划案生成、三级目录生成与编辑、正文工作台与版本历史、文件上传与文本分析、创作模型沉淀与复用、公共图书库与作者库、Markdown 导出。
 
 ## Getting Started
 
@@ -30,7 +30,7 @@ npm run dev
 - 默认数据库：`./data/database.sqlite`
 - 默认文件根目录：`./data`
 - 生产环境建议设置：`DATABASE_URL=file:/data/database.sqlite` 与 `STORAGE_ROOT=/data`
-- 默认 AI 服务商为 Apimart + `deepseek-v3.2`，需要配置 `APIMART_API_KEY` 和 `APIMART_BASE_URL`
+- 默认 AI 服务商为 Apimart + `deepseek-v3-0324`，需要配置 `APIMART_API_KEY` 和 `APIMART_BASE_URL`
 - 其他服务商可通过 `AI_DEFAULT_PROVIDER`、`AI_DEFAULT_MODEL` 以及对应环境变量切换
 
 ## 常用命令
@@ -39,6 +39,83 @@ npm run dev
 npm run lint
 npm run build
 ```
+
+## 部署
+
+### 自有服务器
+
+当前 Node.js 部署继续使用本地 SQLite 和本地文件目录，适合单机测试或小规模内测：
+
+```bash
+npm ci
+cp .env.example .env.production
+npm run db:push
+npm run db:seed
+npm run build
+PORT=3000 npm run start
+```
+
+生产建议配置：
+
+```bash
+DATABASE_URL="file:/data/aibook/database.sqlite"
+STORAGE_ROOT="/data/aibook"
+```
+
+前面用 Nginx/Caddy 反代到 `127.0.0.1:3000`，并用 systemd 或 PM2 守护进程。
+
+### Cloudflare Workers
+
+Cloudflare 部署使用 OpenNext + Workers，数据库使用 D1，上传和导出文件使用 R2。
+
+首次准备：
+
+```bash
+npm ci
+npx wrangler login
+npx wrangler d1 create ai-book-saas
+npx wrangler r2 bucket create ai-book-saas-storage
+npx wrangler r2 bucket create ai-book-saas-opennext-cache
+```
+
+把 D1 创建后返回的 `database_id` 写入 `wrangler.jsonc`。本地预览可复制 `.dev.vars.example` 为 `.dev.vars`，生产密钥用 Wrangler secrets：
+
+```bash
+npx wrangler secret put ADMIN_EMAIL
+npx wrangler secret put ADMIN_PASSWORD
+npx wrangler secret put APIMART_API_KEY
+npx wrangler secret put APIMART_BASE_URL
+```
+
+D1 初始化：
+
+```bash
+npm run db:migrate:cf:local
+npm run db:seed:cf:local
+```
+
+本地 Cloudflare 运行时预览：
+
+```bash
+npm run build:cf
+npm run preview:cf
+```
+
+部署到 Cloudflare：
+
+```bash
+npm run db:migrate:cf
+npm run db:seed:cf
+npm run deploy:cf
+```
+
+远程生成 Drizzle 迁移时需要在本机设置 `CLOUDFLARE_ACCOUNT_ID`、`CLOUDFLARE_D1_DATABASE_ID`、`CLOUDFLARE_API_TOKEN`，然后执行：
+
+```bash
+npm run db:generate:cf
+```
+
+注意：Cloudflare 部署下暂只支持上传并解析 `txt/md`；`docx/pdf` 解析依赖 Node 生态包，后续作为 Workers 兼容性专项处理。自有服务器部署仍支持 `txt/md/docx/pdf`。
 
 ## Phase 2 路由
 
@@ -87,3 +164,29 @@ npm run build
 - `PATCH /api/models/[modelId]`：更新创作模型内容
 - `DELETE /api/models/[modelId]`：删除创作模型
 - `POST /api/models/[modelId]/create-project`：基于创作模型创建新书项目
+
+## Phase 7 路由
+
+- `/books`：公共图书库，支持书名、作者和分类筛选
+- `/books/[bookId]`：图书详情，并可带入灵感信息创建新书
+- `/authors`：公共作者库，支持作者、代表作、风格和领域筛选
+- `/admin/books`：管理员图书后台，支持新增、编辑、删除、JSON 导入
+- `/admin/authors`：管理员作者后台，支持新增、编辑、删除、JSON 导入
+- `GET /api/books`：读取公共图书列表
+- `GET /api/books/[bookId]`：读取公共图书详情
+- `GET /api/authors`：读取公共作者列表
+- `GET /api/authors/[authorId]`：读取公共作者详情
+- `POST /api/admin/books`：管理员新增图书
+- `PATCH /api/admin/books/[bookId]`：管理员更新图书
+- `DELETE /api/admin/books/[bookId]`：管理员删除图书
+- `POST /api/admin/books/import`：管理员 JSON 导入图书
+- `POST /api/admin/authors`：管理员新增作者
+- `PATCH /api/admin/authors/[authorId]`：管理员更新作者
+- `DELETE /api/admin/authors/[authorId]`：管理员删除作者
+- `POST /api/admin/authors/import`：管理员 JSON 导入作者
+
+## Phase 8 路由
+
+- `/projects/[projectId]/export`：项目 Markdown 导出页
+- `GET /api/projects/[projectId]/export/markdown`：生成完整书稿 Markdown，写入 `data/exports/{projectId}`
+- `GET /api/projects/[projectId]/exports/[filename]`：下载已生成的 Markdown 文件

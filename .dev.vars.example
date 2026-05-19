@@ -1,0 +1,8 @@
+APP_RUNTIME="cloudflare"
+ADMIN_EMAIL="admin@example.com"
+ADMIN_PASSWORD="change-me-before-production"
+ADMIN_NICKNAME="管理员"
+AI_DEFAULT_PROVIDER="apimart"
+AI_DEFAULT_MODEL="deepseek-v3-0324"
+APIMART_API_KEY=""
+APIMART_BASE_URL=""
