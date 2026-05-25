@@ -66,10 +66,25 @@ function buildChatCompletionsUrl(baseUrl: string) {
   return `${normalized}/v1/chat/completions`;
 }
 
+function buildRequestBody(providerKey: AiProviderKey, input: ChatCompletionInput, model: string, stream = false) {
+  return {
+    model,
+    messages: input.messages,
+    temperature: input.temperature ?? 0.4,
+    ...(typeof input.maxTokens === "number" ? { max_tokens: input.maxTokens } : {}),
+    ...(providerKey === "deepseek" ? { thinking: { type: "disabled" } } : {}),
+    ...(input.responseFormat === "text"
+      ? {}
+      : { response_format: { type: input.responseFormat ?? "json_object" } }),
+    stream,
+  };
+}
+
 export async function createChatCompletion(input: ChatCompletionInput) {
   const provider = getProvider(input.provider);
   const apiKey = getEnvValue(provider.apiKeyEnv);
   const baseUrl = getEnvValue(provider.baseUrlEnv);
+  const model = input.model ?? getEnvValue("AI_DEFAULT_MODEL") ?? provider.defaultModel;
 
   if (!apiKey || !baseUrl) {
     throw new AiConfigurationError(`请配置 ${provider.apiKeyEnv} 和 ${provider.baseUrlEnv}`);
@@ -87,16 +102,7 @@ export async function createChatCompletion(input: ChatCompletionInput) {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        model: input.model ?? getEnvValue("AI_DEFAULT_MODEL") ?? provider.defaultModel,
-        messages: input.messages,
-        temperature: input.temperature ?? 0.4,
-        ...(typeof input.maxTokens === "number" ? { max_tokens: input.maxTokens } : {}),
-        ...(input.responseFormat === "text"
-          ? {}
-          : { response_format: { type: input.responseFormat ?? "json_object" } }),
-        stream: false,
-      }),
+      body: JSON.stringify(buildRequestBody(provider.key, input, model)),
     });
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
@@ -138,6 +144,57 @@ export async function createChatCompletion(input: ChatCompletionInput) {
   }
 
   return content;
+}
+
+export async function* createChatCompletionStream(input: ChatCompletionInput): AsyncGenerator<string> {
+  const provider = getProvider(input.provider);
+  const apiKey = getEnvValue(provider.apiKeyEnv);
+  const baseUrl = getEnvValue(provider.baseUrlEnv);
+  const model = input.model ?? getEnvValue("AI_DEFAULT_MODEL") ?? provider.defaultModel;
+
+  if (!apiKey || !baseUrl) {
+    throw new AiConfigurationError(`请配置 ${provider.apiKeyEnv} 和 ${provider.baseUrlEnv}`);
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), input.timeoutMs ?? DEFAULT_TIMEOUT_MS);
+  let response: Response;
+
+  try {
+    response = await fetch(buildChatCompletionsUrl(baseUrl), {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(buildRequestBody(provider.key, input, model, true)),
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new AiProviderError("AI 请求超时，请稍后重试", "timeout");
+    }
+
+    throw new AiProviderError(
+      error instanceof Error ? `AI 请求失败：${error.message}` : "AI 请求失败，请稍后重试",
+      "request",
+    );
+  } finally {
+    clearTimeout(timeout);
+  }
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => "");
+    const payload = parseProviderPayload(text);
+    const message = payload?.error?.message ?? payload?.message ?? `AI 请求失败：${response.status}`;
+    throw new AiProviderError(message, "request");
+  }
+
+  if (!response.body) {
+    throw new AiProviderError("AI 未返回流式响应", "request");
+  }
+
+  yield* parseProviderStream(response.body);
 }
 
 function parseProviderPayload(text: string) {
@@ -184,6 +241,52 @@ function parseSsePayload(text: string) {
   }
 
   return lastPayload;
+}
+
+async function* parseProviderStream(body: ReadableStream<Uint8Array>) {
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) {
+      break;
+    }
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split(/\r?\n/);
+    buffer = lines.pop() ?? "";
+
+    for (const line of lines) {
+      const data = line.trim().replace(/^data:\s*/, "");
+      if (!data || data === "[DONE]" || !line.trim().startsWith("data:")) {
+        continue;
+      }
+
+      const content = getStreamContent(data);
+      if (content) {
+        yield content;
+      }
+    }
+  }
+
+  const finalData = buffer.trim().replace(/^data:\s*/, "");
+  const finalContent = getStreamContent(finalData);
+  if (finalContent) {
+    yield finalContent;
+  }
+}
+
+function getStreamContent(data: string) {
+  try {
+    const payload = JSON.parse(data);
+    const source = payload.data ?? payload;
+    const choice = source.choices?.[0];
+    return choice?.delta?.content ?? choice?.message?.content ?? choice?.text ?? "";
+  } catch {
+    return "";
+  }
 }
 
 function getContentFromPayload(payload: {

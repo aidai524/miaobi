@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, FileText } from "lucide-react";
-import { MarkdownExportClient } from "@/components/export/markdown-export-client";
+import { ProjectExportClient } from "@/components/export/markdown-export-client";
 import { ProjectShell } from "@/components/project/project-shell";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -46,21 +46,21 @@ export default async function ProjectExportPage({ params }: PageProps) {
           <ArrowLeft className="h-4 w-4" />
           返回正文工作台
         </Link>
-        <p className="text-sm font-medium text-zinc-500">Markdown Export</p>
+        <p className="text-sm font-medium text-zinc-500">Book Export</p>
         <h1 className="mt-1 text-2xl font-semibold text-zinc-950">{project.title || project.topic}</h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-600">
-          导出文件会包含书名、策划案摘要、目录和按目录顺序拼接的正文。
+          导出文件会包含书名、策划案摘要、目录和按目录顺序拼接的正文，可下载 Markdown 或 Word 文件。
         </p>
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
         <Card>
           <CardHeader>
-            <CardTitle>生成 Markdown</CardTitle>
-            <CardDescription>每次生成都会在本地 exports 目录写入一个新的 .md 文件。</CardDescription>
+            <CardTitle>生成导出文件</CardTitle>
+            <CardDescription>每次生成都会写入一个新的导出文件，支持 Markdown 和 Word。</CardDescription>
           </CardHeader>
           <CardContent>
-            <MarkdownExportClient projectId={id} />
+            <ProjectExportClient projectId={id} />
           </CardContent>
         </Card>
 

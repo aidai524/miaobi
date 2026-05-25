@@ -48,6 +48,7 @@ export type GenerateChapterInput = GenerateBookPlanInput & {
   currentNode: ChapterContextNode;
   previousNode?: ChapterContextNode | null;
   nextNode?: ChapterContextNode | null;
+  targetWordCount?: number | null;
 };
 
 export type RewriteChapterAction =

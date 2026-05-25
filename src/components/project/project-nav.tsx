@@ -20,7 +20,7 @@ type ProjectNavItem = {
   label: string;
 };
 
-export function ProjectNav({ items }: { items: ProjectNavItem[] }) {
+export function ProjectNav({ items, collapsed = false }: { items: ProjectNavItem[]; collapsed?: boolean }) {
   const pathname = usePathname();
 
   return (
@@ -31,15 +31,17 @@ export function ProjectNav({ items }: { items: ProjectNavItem[] }) {
           <li key={`${item.href}-${item.label}`}>
             <Link
               className={cn(
-                "flex items-center gap-3 rounded-xl px-3 py-2.5 font-medium transition-colors",
+                "flex items-center rounded-xl py-2.5 font-medium transition-colors",
+                collapsed ? "justify-center px-2" : "gap-3 px-3",
                 isActive
                   ? "bg-accent-light text-accent"
                   : "text-text-secondary hover:bg-bg-secondary hover:text-text-primary",
               )}
               href={item.href}
+              title={collapsed ? item.label : undefined}
             >
               <item.icon className="h-4 w-4 shrink-0" />
-              <span className="truncate">{item.label}</span>
+              <span className={cn("truncate", collapsed && "sr-only")}>{item.label}</span>
             </Link>
           </li>
         );
@@ -58,6 +60,6 @@ const baseNavItems: ProjectNavItem[] = [
   { href: "/authors", icon: Users, label: "作者库" },
 ];
 
-export function ProjectNavMenu() {
-  return <ProjectNav items={baseNavItems} />;
+export function ProjectNavMenu({ collapsed = false }: { collapsed?: boolean }) {
+  return <ProjectNav items={baseNavItems} collapsed={collapsed} />;
 }

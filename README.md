@@ -30,7 +30,7 @@ npm run dev
 - 默认数据库：`./data/database.sqlite`
 - 默认文件根目录：`./data`
 - 生产环境建议设置：`DATABASE_URL=file:/data/database.sqlite` 与 `STORAGE_ROOT=/data`
-- 默认 AI 服务商为 Apimart + `deepseek-v3-0324`，需要配置 `APIMART_API_KEY` 和 `APIMART_BASE_URL`
+- 默认 AI 服务商为 DeepSeek 官方接口 + `deepseek-v4-pro`，需要配置 `DEEPSEEK_API_KEY`，默认 `DEEPSEEK_BASE_URL` 为 `https://api.deepseek.com`
 - 其他服务商可通过 `AI_DEFAULT_PROVIDER`、`AI_DEFAULT_MODEL` 以及对应环境变量切换
 
 ## 常用命令
@@ -83,8 +83,7 @@ npx wrangler r2 bucket create ai-book-saas-opennext-cache
 ```bash
 npx wrangler secret put ADMIN_EMAIL
 npx wrangler secret put ADMIN_PASSWORD
-npx wrangler secret put APIMART_API_KEY
-npx wrangler secret put APIMART_BASE_URL
+npx wrangler secret put DEEPSEEK_API_KEY
 ```
 
 D1 初始化：

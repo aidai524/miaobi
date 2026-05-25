@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, max } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { bookProjects, chapterVersions, chapters, outlineNodes } from "@/lib/db/schema";
+import { buildOutlineTree } from "@/lib/outline/service";
 import { getUserProject } from "@/lib/projects/service";
 import type { ChapterUpdateInput } from "./validation";
 
@@ -15,6 +16,24 @@ export function countWords(content: string) {
   return asciiWords + cjkChars;
 }
 
+function getLeafNodeIds(nodes: Array<typeof outlineNodes.$inferSelect>) {
+  const tree = buildOutlineTree(nodes);
+  const ids = new Set<number>();
+
+  function walk(items: typeof tree) {
+    for (const item of items) {
+      if (item.children.length) {
+        walk(item.children);
+      } else {
+        ids.add(item.id);
+      }
+    }
+  }
+
+  walk(tree);
+  return ids;
+}
+
 export async function ensureProjectChapters(projectId: number, userId: number) {
   const project = await getUserProject(projectId, userId);
   if (!project) {
@@ -27,10 +46,15 @@ export async function ensureProjectChapters(projectId: number, userId: number) {
     .where(eq(outlineNodes.projectId, projectId))
     .orderBy(asc(outlineNodes.level), asc(outlineNodes.sortOrder), asc(outlineNodes.id));
 
+  const leafNodeIds = getLeafNodeIds(nodes);
   const existing = await db.select().from(chapters).where(eq(chapters.projectId, projectId));
   const existingNodeIds = new Set(existing.map((chapter) => chapter.outlineNodeId));
 
   for (const node of nodes) {
+    if (!leafNodeIds.has(node.id)) {
+      continue;
+    }
+
     if (existingNodeIds.has(node.id)) {
       continue;
     }
@@ -54,6 +78,13 @@ export async function listProjectChapters(projectId: number, userId: number) {
     return null;
   }
 
+  const nodes = await db
+    .select()
+    .from(outlineNodes)
+    .where(eq(outlineNodes.projectId, projectId))
+    .orderBy(asc(outlineNodes.level), asc(outlineNodes.sortOrder), asc(outlineNodes.id));
+  const leafNodeIds = getLeafNodeIds(nodes);
+
   const rows = await db
     .select({
       chapter: chapters,
@@ -64,10 +95,12 @@ export async function listProjectChapters(projectId: number, userId: number) {
     .where(eq(chapters.projectId, projectId))
     .orderBy(asc(outlineNodes.level), asc(outlineNodes.sortOrder), asc(outlineNodes.id));
 
-  return rows.map((row) => ({
-    ...row.chapter,
-    outlineNode: row.outlineNode,
-  }));
+  return rows
+    .filter((row) => leafNodeIds.has(row.outlineNode.id))
+    .map((row) => ({
+      ...row.chapter,
+      outlineNode: row.outlineNode,
+    }));
 }
 
 export async function getUserChapter(chapterId: number, userId: number): Promise<ChapterWithNode | null> {
@@ -85,6 +118,15 @@ export async function getUserChapter(chapterId: number, userId: number): Promise
 
   const row = rows[0];
   if (!row) {
+    return null;
+  }
+
+  const childRows = await db
+    .select({ id: outlineNodes.id })
+    .from(outlineNodes)
+    .where(and(eq(outlineNodes.projectId, row.chapter.projectId), eq(outlineNodes.parentId, row.outlineNode.id)))
+    .limit(1);
+  if (childRows.length) {
     return null;
   }
 

@@ -8,7 +8,7 @@ const optionalText = z
   .transform((value) => (value ? value : undefined));
 
 export const createProjectSchema = z.object({
-  topic: z.string().trim().min(2, "请输入至少 2 个字的图书主题").max(300, "图书主题不能超过 300 个字"),
+  topic: z.string().trim().min(2, "请输入至少 2 个字的图书主题").max(1000, "图书主题不能超过 1000 个字"),
   targetReader: optionalText,
   bookType: optionalText,
   writingStyle: optionalText,

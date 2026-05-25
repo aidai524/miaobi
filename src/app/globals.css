@@ -54,3 +54,37 @@ body {
 * {
   box-sizing: border-box;
 }
+
+.chapter-markdown-editor .w-md-editor {
+  border-color: var(--border);
+  border-radius: 0.5rem;
+  box-shadow: none;
+  overflow: hidden;
+}
+
+.chapter-markdown-editor .w-md-editor-toolbar {
+  background: var(--bg-card);
+  border-bottom-color: var(--border-light);
+}
+
+.chapter-markdown-editor .w-md-editor-text-input,
+.chapter-markdown-editor .w-md-editor-text-pre > code,
+.chapter-markdown-editor .w-md-editor-text-pre {
+  font-family: var(--font-sans);
+  font-size: 15px !important;
+  line-height: 1.9 !important;
+}
+
+.chapter-markdown-editor .w-md-editor-preview {
+  box-shadow: inset 1px 0 0 var(--border-light);
+}
+
+.chapter-markdown-preview {
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  line-height: 1.9;
+}
+
+.chapter-markdown-preview p {
+  margin: 0 0 1em;
+}

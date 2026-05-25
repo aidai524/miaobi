@@ -78,6 +78,7 @@ export function ProjectCreateForm({ models = [], defaultReferenceModelId, defaul
           className="min-h-[140px]"
           placeholder="例如：面向中小企业老板的 AI 提效实战手册"
           defaultValue={defaults.topic}
+          maxLength={1000}
           required
         />
         <p className="text-xs text-text-muted">

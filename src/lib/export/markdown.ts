@@ -19,6 +19,10 @@ export type MarkdownExportResult = {
   generatedAt: string;
 };
 
+export type ProjectExportResult = MarkdownExportResult & {
+  format: "markdown" | "word";
+};
+
 function escapeHeading(value: string) {
   return value.replace(/^#+\s*/, "").trim();
 }
@@ -88,18 +92,141 @@ function renderChapter(node: OutlineTreeNode, chapter: ExportChapter | undefined
 
   if (content) {
     parts.push(content);
-  } else {
+  } else if (!node.children.length) {
     parts.push("> 本节暂无正文。");
   }
 
   return parts.join("\n\n");
 }
 
+function renderExportSections(
+  project: NonNullable<Awaited<ReturnType<typeof getUserProject>>>,
+  plan: typeof bookPlans.$inferSelect | null,
+  outlineTree: OutlineTreeNode[],
+  chapterByNodeId: Map<number, ExportChapter>,
+) {
+  const title = project.title || project.topic;
+  const orderedNodes = flattenOutlineTree(outlineTree);
+
+  return [
+    `# ${escapeHeading(title)}`,
+    renderPlanSummary(plan),
+    renderOutline(outlineTree),
+    "## 正文",
+    ...orderedNodes.map((node) => renderChapter(node, chapterByNodeId.get(node.id))),
+  ].filter((section) => section.trim());
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function markdownInlineToHtml(value: string) {
+  return escapeHtml(value).replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+}
+
+function markdownToHtml(markdown: string) {
+  const lines = markdown.split(/\r?\n/);
+  const html: string[] = [];
+  let paragraph: string[] = [];
+  let listOpen = false;
+
+  function flushParagraph() {
+    if (paragraph.length) {
+      html.push(`<p>${paragraph.map(markdownInlineToHtml).join("<br />")}</p>`);
+      paragraph = [];
+    }
+  }
+
+  function closeList() {
+    if (listOpen) {
+      html.push("</ul>");
+      listOpen = false;
+    }
+  }
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      flushParagraph();
+      closeList();
+      continue;
+    }
+
+    const heading = trimmed.match(/^(#{1,6})\s+(.+)$/);
+    if (heading) {
+      flushParagraph();
+      closeList();
+      const level = Math.min(heading[1].length, 4);
+      html.push(`<h${level}>${markdownInlineToHtml(heading[2])}</h${level}>`);
+      continue;
+    }
+
+    const listItem = trimmed.match(/^[-*]\s+(.+)$/);
+    if (listItem) {
+      flushParagraph();
+      if (!listOpen) {
+        html.push("<ul>");
+        listOpen = true;
+      }
+      html.push(`<li>${markdownInlineToHtml(listItem[1])}</li>`);
+      continue;
+    }
+
+    if (trimmed.startsWith(">")) {
+      flushParagraph();
+      closeList();
+      html.push(`<blockquote>${markdownInlineToHtml(trimmed.replace(/^>\s*/, ""))}</blockquote>`);
+      continue;
+    }
+
+    closeList();
+    paragraph.push(trimmed);
+  }
+
+  flushParagraph();
+  closeList();
+  return html.join("\n");
+}
+
+function renderWordDocument(markdown: string) {
+  return `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Book Export</title>
+  <style>
+    body { font-family: "SimSun", "Songti SC", serif; font-size: 12pt; line-height: 1.8; color: #111827; }
+    h1 { font-size: 24pt; text-align: center; margin: 0 0 24pt; }
+    h2 { font-size: 18pt; margin: 24pt 0 10pt; border-bottom: 1px solid #d1d5db; padding-bottom: 4pt; }
+    h3 { font-size: 15pt; margin: 18pt 0 8pt; }
+    h4 { font-size: 13pt; margin: 14pt 0 6pt; }
+    p { margin: 0 0 10pt; text-indent: 2em; }
+    blockquote { color: #4b5563; border-left: 3px solid #d1d5db; margin: 10pt 0; padding-left: 10pt; }
+    ul { margin: 0 0 10pt 24pt; }
+  </style>
+</head>
+<body>
+${markdownToHtml(markdown)}
+</body>
+</html>`;
+}
+
 function timestampForFilename(date: Date) {
   return date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
 }
 
-export async function exportProjectMarkdown(projectId: number, userId: number): Promise<MarkdownExportResult | null> {
+function countExportWords(content: string) {
+  const asciiWords = content.match(/[A-Za-z0-9]+(?:[-'][A-Za-z0-9]+)*/g)?.length ?? 0;
+  const cjkChars = content.match(/[\u3400-\u9FFF]/g)?.length ?? 0;
+  return asciiWords + cjkChars;
+}
+
+async function buildProjectMarkdown(projectId: number, userId: number) {
   const project = await getUserProject(projectId, userId);
   if (!project) {
     return null;
@@ -123,32 +250,64 @@ export async function exportProjectMarkdown(projectId: number, userId: number): 
   ]);
 
   const outlineTree = buildOutlineTree(outlineRows);
-  const orderedNodes = flattenOutlineTree(outlineTree);
   const chapterByNodeId = new Map<number, ExportChapter>(
     chapterRows.map((row) => [row.outlineNode.id, { ...row.chapter, outlineNode: row.outlineNode }]),
   );
-
-  const title = project.title || project.topic;
-  const sections = [
-    `# ${escapeHeading(title)}`,
-    renderPlanSummary(planRows[0] ?? null),
-    renderOutline(outlineTree),
-    "## 正文",
-    ...orderedNodes.map((node) => renderChapter(node, chapterByNodeId.get(node.id))),
-  ].filter((section) => section.trim());
+  const orderedNodes = flattenOutlineTree(outlineTree);
+  const leafNodeIds = new Set(orderedNodes.filter((node) => !node.children.length).map((node) => node.id));
+  const sections = renderExportSections(project, planRows[0] ?? null, outlineTree, chapterByNodeId);
   const markdown = `${sections.join("\n\n---\n\n")}\n`;
+
+  return {
+    project,
+    markdown,
+    chapterCount: orderedNodes.filter((node) => leafNodeIds.has(node.id) && chapterByNodeId.has(node.id)).length,
+  };
+}
+
+export async function exportProjectMarkdown(projectId: number, userId: number): Promise<ProjectExportResult | null> {
+  const built = await buildProjectMarkdown(projectId, userId);
+  if (!built) {
+    return null;
+  }
+
   const generatedAt = new Date();
   const filename = `book_${timestampForFilename(generatedAt)}.md`;
   const filePath = normalizeStorageKey("exports", projectId, filename);
 
-  await putObject(filePath, markdown, "text/markdown; charset=utf-8");
+  await putObject(filePath, built.markdown, "text/markdown; charset=utf-8");
 
   return {
+    format: "markdown",
     filename,
     filePath,
     downloadUrl: `/api/projects/${projectId}/exports/${filename}`,
-    wordCount: markdown.length,
-    chapterCount: orderedNodes.length,
+    wordCount: countExportWords(built.markdown),
+    chapterCount: built.chapterCount,
+    generatedAt: generatedAt.toISOString(),
+  };
+}
+
+export async function exportProjectWord(projectId: number, userId: number): Promise<ProjectExportResult | null> {
+  const built = await buildProjectMarkdown(projectId, userId);
+  if (!built) {
+    return null;
+  }
+
+  const generatedAt = new Date();
+  const filename = `book_${timestampForFilename(generatedAt)}.doc`;
+  const filePath = normalizeStorageKey("exports", projectId, filename);
+  const wordHtml = renderWordDocument(built.markdown);
+
+  await putObject(filePath, wordHtml, "application/msword; charset=utf-8");
+
+  return {
+    format: "word",
+    filename,
+    filePath,
+    downloadUrl: `/api/projects/${projectId}/exports/${filename}`,
+    wordCount: countExportWords(built.markdown),
+    chapterCount: built.chapterCount,
     generatedAt: generatedAt.toISOString(),
   };
 }
@@ -159,7 +318,7 @@ export async function getProjectExportFile(projectId: number, userId: number, fi
     return null;
   }
 
-  if (!/^book_[A-Za-z0-9]+\.md$/.test(filename)) {
+  if (!/^book_[A-Za-z0-9]+\.(md|doc)$/.test(filename)) {
     return null;
   }
 
@@ -169,5 +328,9 @@ export async function getProjectExportFile(projectId: number, userId: number, fi
     return null;
   }
 
-  return { filename, content };
+  return {
+    filename,
+    content,
+    contentType: filename.endsWith(".doc") ? "application/msword; charset=utf-8" : "text/markdown; charset=utf-8",
+  };
 }

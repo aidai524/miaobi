@@ -30,7 +30,7 @@ export const AI_PROVIDERS: AiProviderConfig[] = [
     label: "DeepSeek",
     baseUrlEnv: "DEEPSEEK_BASE_URL",
     apiKeyEnv: "DEEPSEEK_API_KEY",
-    defaultModel: "deepseek-chat",
+    defaultModel: "deepseek-v4-pro",
   },
   {
     key: "qwen",

@@ -3,11 +3,21 @@
 import { apiError, readApiJson } from "@/lib/api-client";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { FileClock, Loader2, RotateCcw, Save, Sparkles } from "lucide-react";
+import {
+  FileClock,
+  Loader2,
+  PanelLeftClose,
+  PanelLeftOpen,
+  PanelRightClose,
+  PanelRightOpen,
+  RotateCcw,
+  Save,
+  Sparkles,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { MarkdownChapterEditor } from "@/components/studio/markdown-chapter-editor";
 import { formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -54,6 +64,11 @@ type ChapterResponse = {
   chapter?: ChapterItem;
   versions?: ChapterVersion[];
 };
+
+type GenerateStreamEvent =
+  | { event: "chunk"; data: { content?: string } }
+  | { event: "done"; data: { chapter?: ChapterItem } }
+  | { event: "error"; data: { error?: string } };
 
 const rewriteActions = [
   { action: "expand", label: "扩写" },
@@ -128,6 +143,20 @@ function TreeItems({
   );
 }
 
+function parseGenerateStreamEvent(block: string): GenerateStreamEvent | null {
+  const event = block.match(/^event:\s*(.+)$/m)?.[1]?.trim();
+  const data = block.match(/^data:\s*(.+)$/m)?.[1]?.trim();
+  if (!event || !data) {
+    return null;
+  }
+
+  try {
+    return { event, data: JSON.parse(data) } as GenerateStreamEvent;
+  } catch {
+    return null;
+  }
+}
+
 export function ChapterStudio({ outlineTree, initialChapters, initialVersions }: ChapterStudioProps) {
   const router = useRouter();
   const [chapters, setChapters] = useState(initialChapters);
@@ -144,6 +173,8 @@ export function ChapterStudio({ outlineTree, initialChapters, initialVersions }:
   const [versions, setVersions] = useState<ChapterVersion[]>(initialVersions);
   const [error, setError] = useState("");
   const [busyAction, setBusyAction] = useState<string | null>(null);
+  const [outlineCollapsed, setOutlineCollapsed] = useState(false);
+  const [assistantCollapsed, setAssistantCollapsed] = useState(false);
 
   function selectChapter(chapter: ChapterItem) {
     setSelectedChapterId(chapter.id);
@@ -218,12 +249,68 @@ export function ChapterStudio({ outlineTree, initialChapters, initialVersions }:
     }
 
     await runAction("generate", async () => {
-      const result = await request(`/api/chapters/${selectedChapter.id}/generate`, { method: "POST" });
-      if (result.chapter) {
-        updateChapterState(result.chapter);
-      }
+      const result = await streamGeneratedChapter(selectedChapter.id);
+      updateChapterState(result);
       await loadVersions(selectedChapter.id);
     });
+  }
+
+  async function streamGeneratedChapter(chapterId: number) {
+    const response = await fetch(`/api/chapters/${chapterId}/generate`, {
+      method: "POST",
+      headers: {
+        Accept: "text/event-stream",
+      },
+    });
+
+    if (!response.ok || !response.body) {
+      const result = await readApiJson<ChapterResponse>(response);
+      throw new Error(apiError(result, "生成正文失败，请稍后重试"));
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let streamedContent = "";
+    let updatedChapter: ChapterItem | null = null;
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) {
+        break;
+      }
+
+      buffer += decoder.decode(value, { stream: true });
+      const events = buffer.split(/\n\n/);
+      buffer = events.pop() ?? "";
+
+      for (const eventBlock of events) {
+        const event = parseGenerateStreamEvent(eventBlock);
+        if (!event) {
+          continue;
+        }
+
+        if (event.event === "chunk") {
+          const chunk = event.data.content ?? "";
+          streamedContent += chunk;
+          setContent(streamedContent);
+        }
+
+        if (event.event === "done" && event.data.chapter) {
+          updatedChapter = event.data.chapter;
+        }
+
+        if (event.event === "error") {
+          throw new Error(event.data.error || "生成正文失败，请稍后重试");
+        }
+      }
+    }
+
+    if (!updatedChapter) {
+      throw new Error("生成正文未完成，请稍后重试");
+    }
+
+    return updatedChapter;
   }
 
   async function rewrite(action: string) {
@@ -261,23 +348,47 @@ export function ChapterStudio({ outlineTree, initialChapters, initialVersions }:
   }
 
   const isBusy = Boolean(busyAction);
+  const studioGridClass = cn(
+    "grid gap-4",
+    outlineCollapsed && assistantCollapsed
+      ? "xl:grid-cols-[minmax(0,1fr)]"
+      : outlineCollapsed
+        ? "xl:grid-cols-[minmax(0,1fr)_320px]"
+        : assistantCollapsed
+          ? "xl:grid-cols-[300px_minmax(0,1fr)]"
+          : "xl:grid-cols-[300px_minmax(0,1fr)_320px]",
+  );
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[300px_minmax(0,1fr)_320px]">
-      <section className="rounded-lg border border-zinc-200 bg-white">
-        <div className="border-b border-zinc-200 px-4 py-3">
-          <h3 className="text-base font-semibold text-zinc-950">目录</h3>
-          <p className="text-xs text-zinc-500">{chapters.length} 个正文节点</p>
-        </div>
-        <div className="max-h-[760px] overflow-auto p-3">
-          <TreeItems
-            nodes={outlineTree}
-            chapterByNodeId={chapterByNodeId}
-            selectedChapterId={selectedChapter?.id ?? null}
-            onSelect={selectChapter}
-          />
-        </div>
-      </section>
+    <div className={studioGridClass}>
+      {outlineCollapsed ? null : (
+        <section className="rounded-lg border border-zinc-200 bg-white">
+          <div className="flex items-start justify-between gap-3 border-b border-zinc-200 px-4 py-3">
+            <div>
+              <h3 className="text-base font-semibold text-zinc-950">目录</h3>
+              <p className="text-xs text-zinc-500">{chapters.length} 个正文节点</p>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 rounded-lg"
+              onClick={() => setOutlineCollapsed(true)}
+              title="收起目录"
+            >
+              <PanelLeftClose className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="max-h-[760px] overflow-auto p-3">
+            <TreeItems
+              nodes={outlineTree}
+              chapterByNodeId={chapterByNodeId}
+              selectedChapterId={selectedChapter?.id ?? null}
+              onSelect={selectChapter}
+            />
+          </div>
+        </section>
+      )}
 
       <section className="rounded-lg border border-zinc-200 bg-white">
         <div className="border-b border-zinc-200 px-5 py-4">
@@ -289,6 +400,30 @@ export function ChapterStudio({ outlineTree, initialChapters, initialVersions }:
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
+              {outlineCollapsed ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setOutlineCollapsed(false)}
+                  title="展开目录"
+                >
+                  <PanelLeftOpen className="h-4 w-4" />
+                  目录
+                </Button>
+              ) : null}
+              {assistantCollapsed ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setAssistantCollapsed(false)}
+                  title="展开 AI 助手"
+                >
+                  <PanelRightOpen className="h-4 w-4" />
+                  AI 助手
+                </Button>
+              ) : null}
               <Button variant="outline" size="sm" onClick={() => save(false)} disabled={isBusy || !selectedChapter}>
                 {busyAction === "save" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                 保存正文
@@ -313,12 +448,10 @@ export function ChapterStudio({ outlineTree, initialChapters, initialVersions }:
             </div>
             <div className="space-y-2">
               <Label htmlFor="chapter-content">正文</Label>
-              <Textarea
+              <MarkdownChapterEditor
                 id="chapter-content"
-                className="min-h-[560px] resize-y font-mono leading-7"
                 value={content}
-                onChange={(event) => setContent(event.target.value)}
-                placeholder="点击右侧生成正文，或直接开始写作。"
+                onChange={setContent}
               />
             </div>
             {error ? <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p> : null}
@@ -328,75 +461,89 @@ export function ChapterStudio({ outlineTree, initialChapters, initialVersions }:
         )}
       </section>
 
-      <aside className="space-y-4">
-        <section className="rounded-lg border border-zinc-200 bg-white">
-          <div className="border-b border-zinc-200 px-4 py-3">
-            <h3 className="text-base font-semibold text-zinc-950">AI 助手</h3>
-            <p className="text-xs text-zinc-500">生成或改写当前正文</p>
-          </div>
-          <div className="space-y-3 p-4">
-            <Button className="w-full" onClick={generate} disabled={isBusy || !selectedChapter}>
-              {busyAction === "generate" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-              生成正文
-            </Button>
-            <div className="grid grid-cols-2 gap-2">
-              {rewriteActions.map((item) => (
-                <Button
-                  key={item.action}
-                  variant="outline"
-                  size="sm"
-                  onClick={() => rewrite(item.action)}
-                  disabled={isBusy || !selectedChapter || !selectedChapter.content?.trim()}
-                >
-                  {busyAction === `rewrite:${item.action}` ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                  {item.label}
-                </Button>
-              ))}
+      {assistantCollapsed ? null : (
+        <aside className="space-y-4">
+          <section className="rounded-lg border border-zinc-200 bg-white">
+            <div className="flex items-start justify-between gap-3 border-b border-zinc-200 px-4 py-3">
+              <div>
+                <h3 className="text-base font-semibold text-zinc-950">AI 助手</h3>
+                <p className="text-xs text-zinc-500">生成或改写当前正文</p>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 rounded-lg"
+                onClick={() => setAssistantCollapsed(true)}
+                title="收起 AI 助手"
+              >
+                <PanelRightClose className="h-4 w-4" />
+              </Button>
             </div>
-          </div>
-        </section>
+            <div className="space-y-3 p-4">
+              <Button className="w-full" onClick={generate} disabled={isBusy || !selectedChapter}>
+                {busyAction === "generate" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                生成正文
+              </Button>
+              <div className="grid grid-cols-2 gap-2">
+                {rewriteActions.map((item) => (
+                  <Button
+                    key={item.action}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => rewrite(item.action)}
+                    disabled={isBusy || !selectedChapter || !selectedChapter.content?.trim()}
+                  >
+                    {busyAction === `rewrite:${item.action}` ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                    {item.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </section>
 
-        <section className="rounded-lg border border-zinc-200 bg-white">
-          <div className="border-b border-zinc-200 px-4 py-3">
-            <h3 className="text-base font-semibold text-zinc-950">版本历史</h3>
-            <p className="text-xs text-zinc-500">{versions.length} 个版本</p>
-          </div>
-          <div className="max-h-[480px] space-y-3 overflow-auto p-4">
-            {versions.length ? (
-              versions.map((version) => (
-                <div key={version.id} className="rounded-md border border-zinc-200 p-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-medium text-zinc-950">版本 {version.versionNo}</p>
-                      <p className="mt-1 text-xs text-zinc-500">
-                        {version.createdBy} · {formatDateTime(version.createdAt)}
-                      </p>
+          <section className="rounded-lg border border-zinc-200 bg-white">
+            <div className="border-b border-zinc-200 px-4 py-3">
+              <h3 className="text-base font-semibold text-zinc-950">版本历史</h3>
+              <p className="text-xs text-zinc-500">{versions.length} 个版本</p>
+            </div>
+            <div className="max-h-[480px] space-y-3 overflow-auto p-4">
+              {versions.length ? (
+                versions.map((version) => (
+                  <div key={version.id} className="rounded-md border border-zinc-200 p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-medium text-zinc-950">版本 {version.versionNo}</p>
+                        <p className="mt-1 text-xs text-zinc-500">
+                          {version.createdBy} · {formatDateTime(version.createdAt)}
+                        </p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => restore(version.id)}
+                        disabled={isBusy || !selectedChapter}
+                        title="恢复此版本"
+                      >
+                        {busyAction === `restore:${version.id}` ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <RotateCcw className="h-4 w-4" />
+                        )}
+                      </Button>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => restore(version.id)}
-                      disabled={isBusy || !selectedChapter}
-                      title="恢复此版本"
-                    >
-                      {busyAction === `restore:${version.id}` ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <RotateCcw className="h-4 w-4" />
-                      )}
-                    </Button>
+                    <p className="mt-2 line-clamp-3 text-xs leading-5 text-zinc-500">{version.content}</p>
                   </div>
-                  <p className="mt-2 line-clamp-3 text-xs leading-5 text-zinc-500">{version.content}</p>
-                </div>
-              ))
-            ) : (
-              <p className="rounded-md border border-dashed border-zinc-300 p-4 text-center text-sm text-zinc-500">
-                暂无版本
-              </p>
-            )}
-          </div>
-        </section>
-      </aside>
+                ))
+              ) : (
+                <p className="rounded-md border border-dashed border-zinc-300 p-4 text-center text-sm text-zinc-500">
+                  暂无版本
+                </p>
+              )}
+            </div>
+          </section>
+        </aside>
+      )}
     </div>
   );
 }

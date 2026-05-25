@@ -19,7 +19,7 @@ export const updateModelSchema = z.object({
 });
 
 export const createProjectFromModelSchema = z.object({
-  topic: z.string().trim().min(2, "请输入至少 2 个字的图书主题").max(300),
+  topic: z.string().trim().min(2, "请输入至少 2 个字的图书主题").max(1000, "图书主题不能超过 1000 个字"),
   targetReader: z.string().trim().max(500).optional(),
   bookType: z.string().trim().max(500).optional(),
   writingStyle: z.string().trim().max(500).optional(),

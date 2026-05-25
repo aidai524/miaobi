@@ -26,7 +26,7 @@ export async function GET(_request: Request, context: RouteContext) {
 
   return new NextResponse(file.content, {
     headers: {
-      "Content-Type": "text/markdown; charset=utf-8",
+      "Content-Type": file.contentType,
       "Content-Disposition": `attachment; filename="${file.filename}"`,
       "Cache-Control": "no-store",
     },

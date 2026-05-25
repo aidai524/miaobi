@@ -51,7 +51,7 @@ export default async function ProjectStudioPage({ params }: PageProps) {
           aria-disabled={!outlineTree.length}
         >
           <FileDown className="h-4 w-4" />
-          导出 Markdown
+          导出书稿
         </Link>
       </div>
 

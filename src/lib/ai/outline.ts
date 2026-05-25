@@ -4,7 +4,7 @@ import { parseAiJson } from "./json";
 import type { GenerateOutlineInput, OutlineNodeResult, OutlineResult } from "./types";
 
 const OUTLINE_MAX_TOKENS = 2800;
-const OUTLINE_TIMEOUT_MS = 45_000;
+const OUTLINE_TIMEOUT_MS = 120_000;
 
 const suggestedWordCountSchema = z.preprocess((value) => {
   if (typeof value !== "string") {
@@ -147,7 +147,6 @@ export async function generateOutline(input: GenerateOutlineInput): Promise<{
     temperature: 0.2,
     maxTokens: OUTLINE_MAX_TOKENS,
     timeoutMs: OUTLINE_TIMEOUT_MS,
-    responseFormat: "text",
     messages: [
       {
         role: "system",

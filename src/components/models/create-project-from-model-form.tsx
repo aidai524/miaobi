@@ -52,7 +52,7 @@ export function CreateProjectFromModelForm({ modelId }: { modelId: number }) {
     <form className="space-y-4" onSubmit={submit}>
       <div className="space-y-2">
         <Label htmlFor="topic">新书主题</Label>
-        <Textarea id="topic" name="topic" placeholder="输入想要基于该模型创作的新书主题" required />
+        <Textarea id="topic" name="topic" maxLength={1000} placeholder="输入想要基于该模型创作的新书主题" required />
       </div>
       <div className="grid gap-3 md:grid-cols-2">
         <div className="space-y-2">
